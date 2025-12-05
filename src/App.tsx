@@ -20,7 +20,7 @@ function App() {
   }, []);
 
   function createTodo() {
-    client.models.Todo.create({ name: window.prompt("Todo content") });
+    client.models.Todo.create({ content: window.prompt("Todo content") });
   }
 
   return (
@@ -29,7 +29,7 @@ function App() {
       <button onClick={createTodo}>+ new</button>
       <ul>
         {todos.map((todo) => (
-          <li key={todo.id}>{todo.name}</li>
+          <li key={todo.id}>{todo.content}</li>
         ))}
       </ul>
       <div>
