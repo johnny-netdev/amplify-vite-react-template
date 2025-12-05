@@ -51,16 +51,19 @@ const Header: React.FC<HeaderProps> = () => {
 const styles: { [key: string]: React.CSSProperties } = {
   header: {
     display: 'flex',
-    justifyContent: 'space-between', // Puts space between logo and nav
+    justifyContent: 'space-between',
     alignItems: 'center',
     padding: '15px 20px',
-    backgroundColor: '#333', // Dark background
+    backgroundColor: '#333',
     color: 'white',
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
     width: '100%',
     boxSizing: 'border-box',
-    margin: '0', // Ensures no default margin
-  },
+    margin: '0',
+    minHeight: '60px', // Ensures header is tall enough
+    position: 'relative', // Helps with stacking context
+    zIndex: 10, // Ensures header is above other content
+ },
   logo: {
     fontSize: '1.5em',
     fontWeight: 'bold',
