@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
-import CisspText from './CisspText'; // Import the animated text component
+import CisspText from './CISSPText.tsx'; // Import the animated text component
 
 const ThreeDBackground: React.FC = () => {
   return (
