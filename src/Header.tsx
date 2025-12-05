@@ -57,6 +57,9 @@ const styles: { [key: string]: React.CSSProperties } = {
     backgroundColor: '#333', // Dark background
     color: 'white',
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    width: '100%',
+    boxSizing: 'border-box',
+    margin: '0', // Ensures no default margin
   },
   logo: {
     fontSize: '1.5em',

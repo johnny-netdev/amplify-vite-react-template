@@ -1,3 +1,9 @@
+body, #root, main {
+    margin: 0;
+    padding: 0;
+    min-height: 100vh; /* Ensures the body covers the entire viewport height */
+}
+
 body {
   margin: 0;
   background: linear-gradient(180deg, rgb(117, 81, 194), rgb(255, 255, 255));
