@@ -3,6 +3,7 @@ import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
 // 💡 We still need to import these, but we will ONLY use the hook and the component now
 import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react"; 
+import Header from "./Header";
 
 // --- Type Definitions (same as before) ---
 type Todo = Schema["Todo"]["type"] & {
@@ -17,10 +18,8 @@ const client = generateClient<Schema>();
 // This now contains all the logic and is a child of the Provider in main.tsx
 function App() { 
   const [todos, setTodos] = useState<Todo[]>([]);
-  const { authStatus, signOut, toSignIn } = useAuthenticator((context) => [
+  const { authStatus } = useAuthenticator((context) => [
     context.authStatus,
-    context.signOut,
-    context.toSignIn,
   ]);
   // ... (rest of your useEffect, createTodo, deleteTodo, renderAuthButton functions) ...
   
@@ -41,38 +40,22 @@ function App() {
     client.models.Todo.create({ content: window.prompt("Todo content") });
   }
 
-  // Delete Todo function
   function deleteTodo(id: string) {
     client.models.Todo.delete({id});
   }
-
-  // Helper function to render the auth button based on state
-  const renderAuthButton = () => {
-    if (authStatus === 'authenticated') {
-      return (
-        <button onClick={signOut} style={{ marginLeft: "8px" }}>Sign Out</button>
-      );
-    } 
-    // If not authenticated, show the Sign In button
-    return (
-      <button onClick={toSignIn} style={{ marginLeft: "8px" }}>Sign In</button>
-    );
-  };
   
   // Inside App.tsx, replace the entire 'return' block with this:
 
   return (
     // ⭐️ FIX: Use a React Fragment (<>...</>) to render two top-level siblings
     <> 
-      <main>
-        {/* ⭐️ HEADER AREA: Contains Title, New Button, and Auth Button */}
+      <Header /> {/* ⭐️ HEADER AREA: Contains Title, New Button, and Auth Button */}
+      <main style={{ padding: "0 20px" }}>
+        <h1>My todos</h1>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
-          <h1>My todos</h1>
           <div style={{ display: 'flex' }}>
             {/* Only show the 'New' button if logged in */}
             {authStatus === 'authenticated' && <button onClick={createTodo}>+ new</button>}
-            {/* ⭐️ RENDER THE CONDITIONAL AUTH BUTTON */}
-            {renderAuthButton()}
           </div>
         </div>
         
