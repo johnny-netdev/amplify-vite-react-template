@@ -59,52 +59,58 @@ function App() {
     );
   };
   
-  return (
-    <main>
-      {/* ⭐️ HEADER AREA: Contains Title, New Button, and Auth Button */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
-        <h1>My todos</h1>
-        <div style={{ display: 'flex' }}>
-          {/* Only show the 'New' button if logged in */}
-          {authStatus === 'authenticated' && <button onClick={createTodo}>+ new</button>}
-          {/* ⭐️ RENDER THE CONDITIONAL AUTH BUTTON */}
-          {renderAuthButton()}
-        </div>
-      </div>
-      
-      <hr />
-      
-      {/* ⭐️ MAIN CONTENT: Displayed only if authenticated */}
-      {authStatus === 'authenticated' ? (
-        <ul>
-          {todos.map((todo) => (
-            <li key={todo.id}>
-              {todo.content} 
-              <span 
-                style={{ cursor: "pointer", marginLeft: "8px" }} 
-                onClick={() => deleteTodo(todo.id)}
-              >
-                🗑️
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        // Show a prompt when signed out
-        <h2>Please sign in to view and manage your Todo list.</h2>
-      )}
+  // Inside App.tsx, replace the entire 'return' block with this:
 
-      {/* Footer / Info Section */}
-      <div>
-        🥳 App successfully hosted.
-        <br />
-        <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-          Review next step of this tutorial.
-        </a>
-      </div>
+  return (
+    // ⭐️ FIX: Use a React Fragment (<>...</>) to render two top-level siblings
+    <> 
+      <main>
+        {/* ⭐️ HEADER AREA: Contains Title, New Button, and Auth Button */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
+          <h1>My todos</h1>
+          <div style={{ display: 'flex' }}>
+            {/* Only show the 'New' button if logged in */}
+            {authStatus === 'authenticated' && <button onClick={createTodo}>+ new</button>}
+            {/* ⭐️ RENDER THE CONDITIONAL AUTH BUTTON */}
+            {renderAuthButton()}
+          </div>
+        </div>
+        
+        <hr />
+        
+        {/* ⭐️ MAIN CONTENT: Displayed only if authenticated */}
+        {authStatus === 'authenticated' ? (
+          <ul>
+            {todos.map((todo) => (
+              <li key={todo.id}>
+                {todo.content} 
+                <span 
+                  style={{ cursor: "pointer", marginLeft: "8px" }} 
+                  onClick={() => deleteTodo(todo.id)}
+                >
+                  🗑️
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          // Show a prompt when signed out
+          <h2>Please sign in to view and manage your Todo list.</h2>
+        )}
+
+        {/* Footer / Info Section */}
+        <div>
+          🥳 App successfully hosted.
+          <br />
+          <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
+            Review next step of this tutorial.
+          </a>
+        </div>
+      </main>
       
+      {/* ⭐️ CRITICAL: Authenticator component is now a sibling to <main> */}
       <Authenticator /> 
-    </main>
+    </>
   );
 }
 
