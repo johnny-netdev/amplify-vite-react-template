@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { Schema } from "../amplify/data/resource";
 import { generateClient } from "aws-amplify/data";
+import { useAuthenticator } from "@aws-amplify/ui-react";
+
 
 type Todo = Schema["Todo"]["type"] & {
   id: string;
@@ -12,6 +14,7 @@ const client = generateClient<Schema>();
 
 function App() {
   const [todos, setTodos] = useState<Todo[]>([]);
+  const { signOut } = useAuthenticator((context) => [context.signOut]);
 
   useEffect(() => {
     client.models.Todo.observeQuery().subscribe({
@@ -31,6 +34,7 @@ function App() {
     <main>
       <h1>My todos</h1>
       <button onClick={createTodo}>+ new</button>
+      <button onClick={signOut} style={{ marginLeft: "8px" }}>Sign Out</button>;
       <ul>
         {todos.map((todo) => (
           <li key={todo.id}>
