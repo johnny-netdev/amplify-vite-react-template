@@ -5,6 +5,9 @@ import { generateClient } from "aws-amplify/data";
 import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react"; 
 import Header from "./Header";
 
+// ⭐️ INTEGRATION POINT 1: Import the new background component
+import ThreeDBackground from "./components/ThreeDBackground"; 
+
 // --- Type Definitions (same as before) ---
 type Todo = Schema["Todo"]["type"] & {
   id: string;
@@ -21,7 +24,6 @@ function App() {
   const { authStatus } = useAuthenticator((context) => [
     context.authStatus,
   ]);
-  // ... (rest of your useEffect, createTodo, deleteTodo, renderAuthButton functions) ...
   
   // useEffect Hook for fetching Todos
   useEffect(() => {
@@ -49,8 +51,16 @@ function App() {
   return (
     // ⭐️ FIX: Use a React Fragment (<>...</>) to render two top-level siblings
     <> 
+      {/* ⭐️ INTEGRATION POINT 2: Place the 3D Background component here. */}
+      {/* It uses 'position: fixed' and 'z-index: -1' internally, so it will always be the background. */}
+      <ThreeDBackground />
+
+      {/* The rest of your UI (Header, main, Authenticator) will float on top of the background. */}
+
       <Header /> {/* ⭐️ HEADER AREA: Contains Title, New Button, and Auth Button */}
-      <main style={{ padding: "0 20px" }}>
+      
+      {/* ⭐️ Set position: 'relative' and zIndex: 1 on your main content to guarantee it overlays the background. */}
+      <main style={{ padding: "0 20px", position: 'relative', zIndex: 1, color: 'white' }}>
         <h1>My todos</h1>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0' }}>
           <div style={{ display: 'flex' }}>
