@@ -53,7 +53,7 @@ const styles: { [key: string]: React.CSSProperties } = {
     display: 'flex',
     justifyContent: 'space-between', // Puts space between logo and nav
     alignItems: 'center',
-    padding: '10px 20px',
+    padding: '15px 20px',
     backgroundColor: '#333', // Dark background
     color: 'white',
     boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
