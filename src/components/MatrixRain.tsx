@@ -25,7 +25,7 @@ const CodeColumn = () => {
     useFrame((_, delta) => {
         if (meshRef.current) {
             // Move the column down
-            meshRef.current.position.y -= RAIN_SPEED * delta * 40; 
+            meshRef.current.position.y -= RAIN_SPEED * delta * 20; 
 
             // If the column falls off the bottom of the screen, reset it to the top
             if (meshRef.current.position.y < -30) {
