@@ -22,7 +22,7 @@ const CodeColumn = () => {
     const meshRef = useRef<Mesh>(null!);
 
     // 3. Animation Logic
-    useFrame((state, delta) => {
+    useFrame((_, delta) => {
         if (meshRef.current) {
             // Move the column down
             meshRef.current.position.y -= RAIN_SPEED * delta * 60; 
