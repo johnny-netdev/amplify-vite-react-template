@@ -3,6 +3,7 @@
 import React from 'react';
 import { Canvas } from '@react-three/fiber';
 import CisspText from './CISSPText.tsx'; // Import the animated text component
+import MatrixRain from './MatrixRain'; // Import the Matrix rain component
 
 const ThreeDBackground: React.FC = () => {
   return (
@@ -42,7 +43,7 @@ const ThreeDBackground: React.FC = () => {
           intensity={1} 
           color="#00FF00" 
         />
-        
+        <MatrixRain />
         {/* 4. The Animated CISSP Text Object */}
         <CisspText /> 
         

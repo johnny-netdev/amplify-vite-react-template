@@ -10,7 +10,7 @@ function CisspText() {
   const meshRef = useRef<Mesh>(null!); 
   
   // 2. Define the path to your JSON font file in the public directory
-  const fontPath = '/fonts/Roboto_Bold.json'; 
+  const fontPath = '/public/fonts/BungeeTint-Regular1764976631.json'; 
 
   // 3. The useFrame hook runs on every frame to create the animation loop.
   useFrame((_, delta) => {
