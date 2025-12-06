@@ -2,7 +2,13 @@ import React from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 
 // Define the component's props if needed (optional for now)
-interface HeaderProps {}
+interface HeaderProps {
+  // ⭐️ This is the function passed from App.tsx to toggle visibility
+    onToggleTodos: () => void; 
+    
+    // ⭐️ This is the boolean state passed from App.tsx to determine button text
+    showTodos: boolean;
+}
 
 const Header: React.FC<HeaderProps> = () => {
   // Use the Authenticator hook to show/hide the correct button

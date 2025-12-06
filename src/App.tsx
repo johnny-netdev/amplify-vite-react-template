@@ -1,5 +1,6 @@
 // src/App.tsx
 
+import { useState } from "react";
 import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react"; 
 import Header from "./Header";
 import ThreeDBackground from "./components/ThreeDBackground"; 
@@ -13,21 +14,25 @@ function App() {
   useAuthenticator((context) => [
     context.authStatus,
   ]);
+
+  const [showTodos, setShowTodos] = useState(false);
+  const toggleTodos = () => {
+      setShowTodos(prev => !prev);
+  };
   
   return (
-    // ⭐️ FIX: Use a React Fragment (<>...</>) to render top-level siblings
+    // ⭐️ Use a React Fragment (<>...</>) to render top-level siblings
     <> 
       {/* 1. 3D BACKGROUND (fixed position, z-index: -1) */}
       <ThreeDBackground />
 
-      {/* 2. HEADER AND MAIN CONTENT (z-index: 1 or higher) */}
-      <Header /> 
+      <Header onToggleTodos={toggleTodos} showTodos={showTodos} /> 
       
       {/* Main content container, positioned over the background */}
       <main style={{ padding: "0 20px", position: 'relative', zIndex: 1, color: 'white' }}>
         
-        {/* ⭐️ INTEGRATION POINT: The entire Todo list is now rendered here */}
-        <Todos />
+        {/* The Todos component is only rendered if showTodos is true. */}
+        {showTodos && <Todos />}
         
         {/* Footer / Info Section */}
         <div style={{ padding: '20px 0 0 0' }}>
