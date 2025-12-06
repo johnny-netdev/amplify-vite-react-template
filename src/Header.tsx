@@ -10,7 +10,7 @@ interface HeaderProps {
     showTodos: boolean;
 }
 
-const Header: React.FC<HeaderProps> = () => {
+const Header: React.FC<HeaderProps> = ({ onToggleTodos, showTodos }) => {
   // Use the Authenticator hook to show/hide the correct button
   const { authStatus, signOut, toSignIn } = useAuthenticator((context) => [
     context.authStatus,
@@ -33,6 +33,17 @@ const Header: React.FC<HeaderProps> = () => {
     );
   };
 
+  // ⭐️ NEW KANBAN BUTTON LOGIC (Always available to open the tool)
+  const renderKanbanButton = () => {
+      const buttonText = showTodos ? 'Hide Kanban' : 'Show Kanban Board';
+
+      return (
+          <button onClick={onToggleTodos} style={styles.navButton}>
+              {buttonText}
+          </button>
+      );
+  };
+
   return (
     <header style={styles.header}>
       {/* ⭐️ 1. Logo Area */}
@@ -46,6 +57,9 @@ const Header: React.FC<HeaderProps> = () => {
         <button style={styles.navButton}>Home</button>
         <button style={styles.navButton}>About</button>
         
+        {/* ⭐️ Kanban Button */}
+        {renderKanbanButton()}
+
         {/* ⭐️ 3. Authentication Button (from your previous App.tsx logic) */}
         {renderAuthButton()}
       </nav>
