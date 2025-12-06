@@ -39,6 +39,8 @@ const CodeColumn = () => {
     // 2. State to hold the current position of the column
     const meshRef = useRef<Mesh>(null!);
     const [codeString, setCodeString] = useState(generateCodeString());
+    const lastChangeTime = useRef(0);
+    const changeInterval = useRef(Math.random() * 0.5 + 0.1);
     
     // 3. Animation Logic
     useFrame((state, delta) => {
