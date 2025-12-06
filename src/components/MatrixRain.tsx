@@ -8,7 +8,7 @@ import { Mesh } from 'three';
 
 // --- Configuration ---
 const RAIN_COUNT = 500; // Number of rain columns
-const RAIN_SPEED = 0.5; // Speed of the code falling
+const RAIN_SPEED = 0.3; // Speed of the code falling
 
 // Component to render a single, random column of code
 const CodeColumn = () => {
