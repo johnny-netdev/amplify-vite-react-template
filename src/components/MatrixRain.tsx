@@ -9,6 +9,9 @@ import { Mesh } from 'three';
 // --- Configuration ---
 const RAIN_COUNT = 500; // Number of rain columns
 const RAIN_SPEED = 0.3; // Speed of the code falling
+const START_CODE = 0x4E00; // 19968 (Start of the primary CJK block)
+const END_CODE = 0x9FFF;   // 40959 (End of the primary CJK block)
+const RANGE = END_CODE - START_CODE + 1;
 
 // Component to render a single, random column of code
 const CodeColumn = () => {
@@ -36,7 +39,11 @@ const CodeColumn = () => {
 
     // 4. Generate random binary/hex characters for the column
     // The columns will look like a mix of numbers and letters
-    const randomChar = () => Math.floor(Math.random() * 10).toString(); 
+    const randomChar = () => {
+        const randomOffset = Math.floor(Math.random() * RANGE);
+        const codePoint = START_CODE + randomOffset;
+        return String.fromCharCode(codePoint);
+    };
 
     // ⭐️ CORRECTED LOGIC: Create a single string separated by newlines (\n)
 const codeString = useMemo(() => {
