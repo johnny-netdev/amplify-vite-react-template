@@ -36,11 +36,11 @@ const CodeColumn = () => {
 
     // 4. Generate random binary/hex characters for the column
     // The columns will look like a mix of numbers and letters
-    const randomChar = () => Math.floor(Math.random() * 30).toString(); 
+    const randomChar = () => Math.floor(Math.random() * 10).toString(); 
 
     // ⭐️ CORRECTED LOGIC: Create a single string separated by newlines (\n)
 const codeString = useMemo(() => {
-    const stackLength = Math.floor(Math.random() * 10) + 5; // Column length varies
+    const stackLength = Math.floor(Math.random() * 15) + 5; // Column length varies
     let stack = '';
     
     for (let i = 0; i < stackLength; i++) {
