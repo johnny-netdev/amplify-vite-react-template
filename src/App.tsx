@@ -15,7 +15,7 @@ const certStyles = {
         marginTop: '50px',
         padding: '20px',
         flexWrap: 'wrap',
-    },
+    } as const,
     certButton: {
         padding: '15px 25px',
         fontSize: '18px',
@@ -28,7 +28,7 @@ const certStyles = {
         minWidth: '250px',
         textAlign: 'center' as const, // TSX requires 'as const' or explicit type for literal string styles
         transition: 'background-color 0.3s'
-    },
+    } as const,
 };
 
 
