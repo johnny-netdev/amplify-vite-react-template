@@ -38,20 +38,17 @@ const CodeColumn = () => {
     // The columns will look like a mix of numbers and letters
     const randomChar = () => Math.floor(Math.random() * 10).toString(); 
 
-    // We render a small stack of characters to form a vertical line
-    const codeStack = useMemo(() => {
-        const stackLength = Math.floor(Math.random() * 10) + 5; // Column length varies
-        const stack = [];
-        for (let i = 0; i < stackLength; i++) {
-            stack.push(
-                <React.Fragment key={i}>
-                    {randomChar()}
-                    <br /> {/* Line break to stack vertically */}
-                </React.Fragment>
-            );
-        }
-        return stack;
-    }, []);
+    // ⭐️ CORRECTED LOGIC: Create a single string separated by newlines (\n)
+const codeString = useMemo(() => {
+    const stackLength = Math.floor(Math.random() * 10) + 5; // Column length varies
+    let stack = '';
+    
+    for (let i = 0; i < stackLength; i++) {
+        stack += randomChar() + '\n'; // ⭐️ Use \n for vertical stacking
+    }
+    
+    return stack;
+}, []);
 
 
     // ⭐️ Use the suppression for TSX compatibility with older Drei versions
@@ -67,7 +64,7 @@ const CodeColumn = () => {
             anchorX="center"
             anchorY="top" // Anchor to the top so it drops correctly
         >
-            {codeStack}
+            {codeString}
             <meshBasicMaterial 
                 color={'#00FF00'} 
                 opacity={0.3} 
