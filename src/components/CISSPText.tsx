@@ -13,7 +13,7 @@ function CisspText() {
   const fontPath = '/fonts/Roboto_Bold.json'; 
 
   // 3. The useFrame hook runs on every frame to create the animation loop.
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (meshRef.current) {
       // Rotate the text slowly on the Y-axis (vertical rotation)
       meshRef.current.rotation.y += delta * 0.2; 
