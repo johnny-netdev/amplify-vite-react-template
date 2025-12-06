@@ -46,7 +46,7 @@ const CodeColumn = () => {
     useFrame((state, delta) => {
         if (meshRef.current) {
             // 1. Movement Logic
-            meshRef.current.position.y -= RAIN_SPEED * delta * 60; 
+            meshRef.current.position.y -= RAIN_SPEED * delta * 20; 
 
             // Reset when column falls off-screen
             if (meshRef.current.position.y < -30) {
