@@ -44,10 +44,8 @@ const ThreeDBackground: React.FC = () => {
           color="#00FF00" 
         />
         <MatrixRain />
-        {/* 4. The Animated CISSP Text Object */}
-        <CisspText /> 
         
-        {/* 5. Optional: A large, dim wireframe sphere for depth/environment */}
+        {/* 4. Optional: A large, dim wireframe sphere for depth/environment */}
         <mesh position={[0, 0, -20]}>
           <sphereGeometry args={[15, 32, 32]} />
           <meshBasicMaterial 

@@ -12,7 +12,7 @@ const certStyles = {
         display: 'flex',
         justifyContent: 'center',
         gap: '20px',
-        marginTop: '50px',
+        marginTop: '150px',
         padding: '20px',
         flexWrap: 'wrap',
     } as const,
