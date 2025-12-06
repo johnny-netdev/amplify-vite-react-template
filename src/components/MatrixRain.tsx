@@ -13,7 +13,7 @@ const RAIN_SPEED = 0.3; // Speed of the code falling
 // Component to render a single, random column of code
 const CodeColumn = () => {
     // 1. Generate random starting position and character for the column
-    const startX = (Math.random() - 0.5) * 40; // Spread across X-axis
+    const startX = (Math.random() - 0.5) * 50; // Spread across X-axis
     const startY = (Math.random() * 50) + 10;   // Start high above the screen
     const startZ = -Math.random() * 50;       // Spread across Z-axis for depth
     const initialY = startY;
@@ -25,7 +25,7 @@ const CodeColumn = () => {
     useFrame((_, delta) => {
         if (meshRef.current) {
             // Move the column down
-            meshRef.current.position.y -= RAIN_SPEED * delta * 20; 
+            meshRef.current.position.y -= RAIN_SPEED * delta * 10; 
 
             // If the column falls off the bottom of the screen, reset it to the top
             if (meshRef.current.position.y < -30) {
@@ -36,7 +36,7 @@ const CodeColumn = () => {
 
     // 4. Generate random binary/hex characters for the column
     // The columns will look like a mix of numbers and letters
-    const randomChar = () => Math.floor(Math.random() * 10).toString(); 
+    const randomChar = () => Math.floor(Math.random() * 30).toString(); 
 
     // ⭐️ CORRECTED LOGIC: Create a single string separated by newlines (\n)
 const codeString = useMemo(() => {
