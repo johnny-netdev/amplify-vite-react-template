@@ -27,7 +27,7 @@ function CisspText() {
       {/* This instructs the TypeScript compiler to ignore the TS2322 error caused by the 'size' prop not existing in the declaration file for this version. */}
       <Text 
         font={fontPath}
-        {/* @ts-expect-error */} 
+        // @ts-expect-error 
         size={1.5}         
         height={0.5}       
         curveSegments={12} 
