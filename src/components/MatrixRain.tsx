@@ -9,12 +9,7 @@ import { Mesh } from 'three';
 // --- Configuration ---
 const RAIN_COUNT = 500; // Number of rain columns
 const RAIN_SPEED = 0.3; // Speed of the code falling
-const CHAR_POOL = [
-    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', // Hex/Decimal Digits
-    'A', 'B', 'C', 'D', 'E', 'F',                      // Hex Letters
-    '零', '一', '二', '三', '四', '五', '六', '七', '八', '九' // Chinese Digits
-];
-
+const BINARY_POOL = ['0', '1'];
 // Component to render a single, random column of code
 const CodeColumn = () => {
     // 1. Generate random starting position and character for the column
@@ -42,8 +37,8 @@ const CodeColumn = () => {
     // 4. Generate random binary/hex characters for the column
     // The columns will look like a mix of numbers and letters
     const randomChar = () => {
-        const randomIndex = Math.floor(Math.random() * CHAR_POOL.length);
-        return CHAR_POOL[randomIndex];
+        const randomIndex = Math.floor(Math.random() * BINARY_POOL.length);
+        return BINARY_POOL[randomIndex];
     };
 
     // ⭐️ CORRECTED LOGIC: Create a single string separated by newlines (\n)
