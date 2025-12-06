@@ -60,7 +60,7 @@ const CodeColumn = () => {
         <Text
             ref={meshRef}
             position={[startX, startY, startZ]}
-            font={'/fonts/bungeetint-regular.json'} // Use your font
+            font={'/fonts/Roboto_Bold.json'} // Use your font
             // @ts-expect-error 
             size={0.5}
             height={0} // Make the rain flat, not extruded
