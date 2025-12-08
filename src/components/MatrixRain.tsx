@@ -4,10 +4,10 @@ import { Text } from '@react-three/drei';
 import { Group } from 'three'; // Correctly importing Group for the ref
 
 // --- Configuration & Global Helpers (Matrix Code Character Generation) ---
-const RAIN_COUNT = 800;             // Total number of columns (Increased density)
-const RAIN_SPEED = 0.05;            // Base speed of the drop (Set to slow)
+const RAIN_COUNT = 900;             // Total number of columns (Increased density)
+const RAIN_SPEED = 0.03;            // Base speed of the drop (Set to slow)
 const COLUMN_HEIGHT = 25;           // Max characters in a drop
-const CHARACTER_SPACING = 0.1;      // Vertical space between characters
+const CHARACTER_SPACING = 0.25;      // Vertical space between characters
 
 
 // Helper to generate a random integer in a range
