@@ -6,7 +6,7 @@ import { Text } from '@react-three/drei';
 import { Group } from 'three'; 
 
 // --- Configuration & Global Helpers ---
-const RAIN_COUNT = 400; // Total number of columns (reduced for performance)
+const RAIN_COUNT = 800; // Total number of columns (reduced for performance)
 const RAIN_SPEED = 0.05; // Base speed of the drop
 const COLUMN_HEIGHT = 15; // Max characters in a drop
 const CHARACTER_SPACING = 0.5; // Vertical space between characters
