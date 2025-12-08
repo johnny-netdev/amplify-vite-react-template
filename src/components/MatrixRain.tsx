@@ -1,25 +1,37 @@
-// src/components/MatrixRain.tsx
-
 import React, { useRef, useState, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Text } from '@react-three/drei'; 
-import { Group } from 'three'; 
+import { Group } from 'three'; // Correctly importing Group for the ref
 
-// --- Configuration & Global Helpers ---
-const RAIN_COUNT = 800; // Total number of columns (reduced for performance)
-const RAIN_SPEED = 0.05; // Base speed of the drop
-const COLUMN_HEIGHT = 15; // Max characters in a drop
-const CHARACTER_SPACING = 0.5; // Vertical space between characters
+// --- Configuration & Global Helpers (Matrix Code Character Generation) ---
+const RAIN_COUNT = 800;             // Total number of columns (Increased density)
+const RAIN_SPEED = 0.05;            // Base speed of the drop (Set to slow)
+const COLUMN_HEIGHT = 15;           // Max characters in a drop
+const CHARACTER_SPACING = 0.5;      // Vertical space between characters
 
-// Alphanumeric pool, like the video (A-Z, 0-9, and some symbols)
-const CHAR_POOL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()_+=-`~[]{}|;:,.<>/?'.split('');
 
-// Helper to get a random character from the pool
-const randomChar = () => CHAR_POOL[Math.floor(Math.random() * CHAR_POOL.length)];
+// Helper to generate a random integer in a range
+const r = (from: number, to: number): number => {
+    return Math.floor(Math.random() * (to - from + 1)) + from;
+};
+
+// Helper to randomly pick one argument
+const pick = (...args: any[]): any => {
+    return args[r(0, args.length - 1)];
+};
+
+// Generate character from specific Unicode ranges (Katakana, symbols, numbers)
+const getChar = (): string => {
+    return String.fromCharCode(pick(
+        r(0x3041, 0x30ff), // Japanese characters
+        r(0x2000, 0x206f), // Symbols/punctuation
+        r(0x0020, 0x003f)  // Spaces, numbers, common symbols
+    ));
+};
+const randomChar = getChar; 
 
 
 // --- Column Data Structure ---
-// Represents the characters and their unique positions/colors
 interface RainCharacter {
     id: number;
     char: string;
@@ -35,46 +47,44 @@ const generateColumn = (): RainCharacter[] => {
 
 
 const CodeColumn: React.FC = () => {
-    // State to manage the characters in the column
     const [columnChars, setColumnChars] = useState(generateColumn);
     
-    // Refs for position and speed
-    const groupRef = useRef<Group>(null!);
-    const speed = useMemo(() => RAIN_SPEED * (Math.random() * 0.5 + 0.75), []); // Randomized speed
+    // Using Group ref for the column container
+    const groupRef = useRef<Group>(null!); 
+    
+    // Randomized speed for each column
+    const speed = useMemo(() => RAIN_SPEED * (Math.random() * 0.5 + 0.75), []); 
 
-    // Resetting position and content when off-screen
-    const startX = useMemo(() => (Math.random() - 0.5) * 40, []);
+    // Position setup (Decreased spread range from 40 to 25)
+    const startX = useMemo(() => (Math.random() - 0.5) * 25, []);
     const initialY = useMemo(() => (Math.random() * 50) + 10, []);
-    const startZ = useMemo(() => -Math.random() * 50, []);
+    const startZ = useMemo(() => -Math.random() * 25, []);
     
 
-    // Animation Logic
+    // Animation Logic (Movement and Reset)
+    // Note: We use '_' instead of 'state' because it is not read (no flicker logic)
     useFrame((_, delta) => {
         if (groupRef.current) {
-            // 1. Movement Logic: Move the entire column group down
+            // 1. Movement Logic
             groupRef.current.position.y -= speed * delta * 60; 
 
-            // 2. Reset Logic: If the column falls off-screen
+            // 2. Reset Logic
             if (groupRef.current.position.y < -30) {
                 groupRef.current.position.y = initialY;
                 
-                // 3. ⭐️ Flickering/Content Change: 
-                // When reset, generate a new pattern for a fresh drop
+                // Regenerate content for a fresh drop
                 setColumnChars(generateColumn()); 
             }
         }
     });
 
-    // ⭐️ Key difference: Render each character individually
+    // ⭐️ Key difference: Render each character individually for gradient control
     return (
         <group ref={groupRef} position={[startX, initialY, startZ]}>
             {columnChars.map((item, index) => {
                 // Determine the character's vertical position in the column
                 const yOffset = -index * CHARACTER_SPACING;
                 
-                // Calculate position relative to the bottom of the drop (index 0)
-                // const relativeIndex = COLUMN_HEIGHT - index - 1; 
-
                 // ⭐️ Color/Opacity Logic (The Trailing Head Effect)
                 let color = '#00FF00'; // Default bright green
                 let opacity = 0.8; 
@@ -99,14 +109,14 @@ const CodeColumn: React.FC = () => {
                     <Text
                         key={item.id}
                         position={[0, yOffset, 0]}
-                        font={'/fonts/Roboto_Bold.json'}
+                        font={'/fonts/Roboto_Bold.json'} // Ensure your font supports CJK
                         // @ts-expect-error (Suppressing the Text component type error)
                         size={CHARACTER_SPACING}
                         height={0}
                         anchorX="center"
                         anchorY="middle"
                     >
-                        {randomChar()} {/* Ensure characters are re-randomized */}
+                        {item.char} {/* Use the character from the state array */}
                         <meshBasicMaterial 
                             color={color} 
                             transparent 
