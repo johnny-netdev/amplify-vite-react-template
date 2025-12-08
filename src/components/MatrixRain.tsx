@@ -52,6 +52,10 @@ const CodeColumn: React.FC = () => {
     // Using Group ref for the column container
     const groupRef = useRef<Group>(null!); 
     
+    // Refs for animation control
+    const lastChangeTime = useRef(0);
+    const changeInterval = useRef(Math.random() * 0.5 + 0.1);
+
     // Randomized speed for each column
     const speed = useMemo(() => RAIN_SPEED * (Math.random() * 0.5 + 0.75), []); 
 
@@ -63,7 +67,7 @@ const CodeColumn: React.FC = () => {
 
     // Animation Logic (Movement and Reset)
     // Note: We use '_' instead of 'state' because it is not read (no flicker logic)
-    useFrame((_, delta) => {
+    useFrame((state, delta) => {
         if (groupRef.current) {
             // 1. Movement Logic
             groupRef.current.position.y -= speed * delta * 60; 
@@ -74,6 +78,17 @@ const CodeColumn: React.FC = () => {
                 
                 // Regenerate content for a fresh drop
                 setColumnChars(generateColumn()); 
+            }
+            // 3. ⭐️ FLICKERING LOGIC: Check if it's time to change characters
+            if (state.clock.elapsedTime > lastChangeTime.current + changeInterval.current) {
+                
+                // Regenerate the content of the column
+                // We'll regenerate a whole new column on flicker for simplicity
+                setColumnChars(generateColumn()); 
+                
+                // Reset the timing refs
+                lastChangeTime.current = state.clock.elapsedTime;
+                changeInterval.current = Math.random() * 0.5 + 0.1; // Set a new random interval
             }
         }
     });
