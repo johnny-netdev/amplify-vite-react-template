@@ -1,161 +1,151 @@
-import React, { useRef, useState, useMemo } from 'react';
+// src/components/MatrixRain.tsx
+
+import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Text } from '@react-three/drei'; 
-import { Group } from 'three'; // Correctly importing Group for the ref
+import { Instances, Instance } from '@react-three/drei'; // ⭐️ New Instancing Imports
+import { Group, BufferGeometry, Material, Matrix4 } from 'three'; // Core Three.js types
 
-// --- Configuration & Global Helpers (Matrix Code Character Generation) ---
-const RAIN_COUNT = 900;             // Total number of columns (Increased density)
-const RAIN_SPEED = 0.03;            // Base speed of the drop (Set to slow)
-const COLUMN_HEIGHT = 25;           // Max characters in a drop
-const CHARACTER_SPACING = 0.25;      // Vertical space between characters
+// --- Configuration ---
+const RAIN_COUNT = 800;             
+const RAIN_SPEED = 0.05;            
+const COLUMN_HEIGHT = 15;           
+const CHARACTER_SPACING = 0.5;
+const FADE_DISTANCE = 40;           // Horizontal and Depth spread
+const TOTAL_CHARACTERS = RAIN_COUNT * COLUMN_HEIGHT;
 
 
-// Helper to generate a random integer in a range
+// Helper functions (Unchanged)
 const r = (from: number, to: number): number => {
     return Math.floor(Math.random() * (to - from + 1)) + from;
 };
-
-// Helper to randomly pick one argument
 const pick = (...args: any[]): any => {
     return args[r(0, args.length - 1)];
 };
-
-// Generate character from specific Unicode ranges (Katakana, symbols, numbers)
 const getChar = (): string => {
-    return String.fromCharCode(pick(
-        r(0x3041, 0x30ff), // Japanese characters
-        r(0x2000, 0x206f), // Symbols/punctuation
-        r(0x0020, 0x003f)  // Spaces, numbers, common symbols
-    ));
-};
-const randomChar = getChar; 
-
-
-// --- Column Data Structure ---
-interface RainCharacter {
-    id: number;
-    char: string;
-}
-
-// Function to generate the initial column array
-const generateColumn = (): RainCharacter[] => {
-    return Array.from({ length: COLUMN_HEIGHT }).map((_, index) => ({
-        id: index,
-        char: randomChar(),
-    }));
+    return String.fromCharCode(pick(r(0x3041, 0x30ff), r(0x2000, 0x206f), r(0x0020, 0x003f)));
 };
 
 
-const CodeColumn: React.FC = () => {
-    const [columnChars, setColumnChars] = useState(generateColumn);
+// --- Instanced Character Logic ---
+const CHARACTERS_DATA = Array.from({ length: TOTAL_CHARACTERS }).map((_, index) => {
+    // Determine which column this character belongs to
+    const columnIndex = Math.floor(index / COLUMN_HEIGHT); 
+    const charIndexInColumn = index % COLUMN_HEIGHT;
     
-    // Using Group ref for the column container
-    const groupRef = useRef<Group>(null!); 
-    
-    // Refs for animation control
-    const lastChangeTime = useRef(0);
-    const changeInterval = useRef(Math.random() * 0.5 + 0.1);
+    // Initial random positions for the column
+    const startX = (Math.random() - 0.5) * FADE_DISTANCE;
+    const initialY = (Math.random() * 50) + 10;
+    const startZ = (Math.random() - 0.5) * FADE_DISTANCE;
+    const speed = RAIN_SPEED * (Math.random() * 0.5 + 0.75);
 
-    // Randomized speed for each column
-    const speed = useMemo(() => RAIN_SPEED * (Math.random() * 0.5 + 0.75), []); 
+    return {
+        // Position of the whole column
+        x: startX,
+        y: initialY + charIndexInColumn * CHARACTER_SPACING, // Y position of this character
+        z: startZ,
+        
+        // Animation properties
+        speed: speed,
+        initialY: initialY,
+        columnIndex: columnIndex,
+        charIndexInColumn: charIndexInColumn,
+        
+        // Appearance
+        color: '#00FF00', // Start with default color
+        opacity: 0.8
+    };
+});
 
-    // Position setup (Decreased spread range from 40 to 25)
-    const startX = useMemo(() => (Math.random() - 0.5) * 25, []);
-    const initialY = useMemo(() => (Math.random() * 50) + 10, []);
-    const startZ = useMemo(() => -Math.random() * 25, []);
-    
+// A single Matrix4 to reuse for updating the instance position
+const matrix = new Matrix4();
 
-    // Animation Logic (Movement and Reset)
-    // Note: We use '_' instead of 'state' because it is not read (no flicker logic)
+// ⭐️ The main component that renders and animates ALL instances
+const InstancedRain: React.FC<{ geometry: BufferGeometry; material: Material }> = ({ geometry, material }) => {
+    const instancesRef = useRef<Group>(null!);
+
     useFrame((state, delta) => {
-        if (groupRef.current) {
-            // 1. Movement Logic
-            groupRef.current.position.y -= speed * delta * 60; 
+        if (!instancesRef.current) return;
+
+        // Loop through all 12,000 characters in the static data array
+        for (let i = 0; i < TOTAL_CHARACTERS; i++) {
+            const charData = CHARACTERS_DATA[i];
+
+            // 1. Update Y Position (Movement)
+            charData.y -= charData.speed * delta * 60;
 
             // 2. Reset Logic
-            if (groupRef.current.position.y < -30) {
-                groupRef.current.position.y = initialY;
-                
-                // Regenerate content for a fresh drop
-                setColumnChars(generateColumn()); 
+            if (charData.y < -30) {
+                // When character drops off-screen, reset the whole column it belongs to
+                // We reset the entire column's starting Y position
+                for (let j = 0; j < COLUMN_HEIGHT; j++) {
+                    const resetIndex = charData.columnIndex * COLUMN_HEIGHT + j;
+                    CHARACTERS_DATA[resetIndex].y = CHARACTERS_DATA[resetIndex].initialY + CHARACTERS_DATA[resetIndex].charIndexInColumn * CHARACTER_SPACING;
+                }
             }
-            // 3. ⭐️ FLICKERING LOGIC: Check if it's time to change characters
-            if (state.clock.elapsedTime > lastChangeTime.current + changeInterval.current) {
-                
-                // Regenerate the content of the column
-                // We'll regenerate a whole new column on flicker for simplicity
-                setColumnChars(generateColumn()); 
-                
-                // Reset the timing refs
-                lastChangeTime.current = state.clock.elapsedTime;
-                changeInterval.current = Math.random() * 0.5 + 0.1; // Set a new random interval
+            
+            // 3. ⭐️ Color/Opacity Logic (The Trailing Head Effect)
+            // Calculate position of this character relative to the head (which is at the bottom)
+            const indexFromHead = charData.charIndexInColumn;
+
+            let color = '#00FF00';
+            let opacity = 0.8;
+            
+            // Note: Since index 0 is the character at the bottom of the drop, we invert the logic
+            // The character with the HIGHEST charIndexInColumn is the one at the top.
+            if (indexFromHead === 0) {
+                // Head of the drop (index 0) is white/brightest
+                color = '#FFFFFF';
+                opacity = 1.0;
+            } else if (indexFromHead < 5) {
+                // Bright green tail
+                color = '#00FF00';
+                opacity = 0.8 - (indexFromHead * 0.1); 
+            } else {
+                // Fading dark green tail
+                color = '#006600'; 
+                opacity = 0.2 - (indexFromHead * 0.01);
             }
+            
+            // 4. Update the Instance Matrix
+            matrix.makeTranslation(charData.x, charData.y, charData.z);
+            instancesRef.current.setMatrixAt(i, matrix);
+            
+            // 5. Update Color (Setting individual instance color is complex, often requires shaders)
+            // For now, we rely on the base material color. We will stick to position updates.
         }
+        
+        // This command tells Three.js to apply all the matrix updates
+        instancesRef.current.instanceMatrix.needsUpdate = true;
     });
 
-    // ⭐️ Key difference: Render each character individually for gradient control
+    // We only need to render the instances once
     return (
-        <group ref={groupRef} position={[startX, initialY, startZ]}>
-            {columnChars.map((item, index) => {
-                // Determine the character's vertical position in the column
-                const yOffset = -index * CHARACTER_SPACING;
-                
-                // ⭐️ Color/Opacity Logic (The Trailing Head Effect)
-                let color = '#00FF00'; // Default bright green
-                let opacity = 0.8; 
-                
-                if (index === 0) {
-                    // BRIGHT HEAD: Make the first character white and fully opaque
-                    color = '#FFFFFF';
-                    opacity = 1.0;
-                } else if (index < 5) {
-                    // BRIGHT TAIL: Characters just behind the head
-                    color = '#00FF00';
-                    opacity = 0.8 - (index * 0.1); 
-                } else {
-                    // FADING TAIL: Characters further back fade to dark green/low opacity
-                    color = '#006600'; // Dark green
-                    opacity = 0.2 - (index * 0.01);
-                }
-
-
-                
-                return (
-                    <Text
-                        key={item.id}
-                        position={[0, yOffset, 0]}
-                        font={'/fonts/Roboto_Bold.json'} // Ensure your font supports CJK
-                        // @ts-expect-error (Suppressing the Text component type error)
-                        size={CHARACTER_SPACING}
-                        height={0}
-                        anchorX="center"
-                        anchorY="middle"
-                    >
-                        {item.char} {/* Use the character from the state array */}
-                        <meshBasicMaterial 
-                            color={color} 
-                            transparent 
-                            opacity={opacity} 
-                        />
-                    </Text>
-                );
-            })}
-        </group>
+        <Instances ref={instancesRef} limit={TOTAL_CHARACTERS} geometry={geometry} material={material}>
+            {/* Render a single Instance for every character */}
+            {CHARACTERS_DATA.map((_, i) => (
+                <Instance key={i} />
+            ))}
+        </Instances>
     );
 };
 
 
+// ⭐️ The main component that fetches the geometry and sets up the scene
 const MatrixRain: React.FC = () => {
-    // Generate an array of CodeColumn components
-    const columns = useMemo(() => {
-        const cols = [];
-        for (let i = 0; i < RAIN_COUNT; i++) {
-            cols.push(<CodeColumn key={i} />);
-        }
-        return cols;
-    }, []);
+    // We need a shared geometry (e.g., a simple box or quad) for all instances
+    const geometry = useMemo(() => new THREE.PlaneGeometry(CHARACTER_SPACING, CHARACTER_SPACING), []); 
+    const material = useMemo(() => new THREE.MeshBasicMaterial({ color: '#00FF00', transparent: true, opacity: 0.8 }), []);
 
-    return <group>{columns}</group>;
+    // NOTE: True text instancing is highly complex and usually requires external libraries or shaders.
+    // The most efficient approach is often to use a simple geometry (like a plane) 
+    // and apply the characters via texture maps, but this requires shaders.
+    // For this implementation, we will use a simple geometry to track position,
+    // which may not display the characters accurately.
+    
+    return (
+        // Returning the Instanced component
+        <InstancedRain geometry={geometry} material={material} />
+    );
 };
 
 export default MatrixRain;
