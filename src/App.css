@@ -1,3 +1,4 @@
+/* src/App.css */
 #root {
   max-width: 1280px;
   margin: 0 auto;
@@ -17,6 +18,35 @@
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    margin-top: 150px;
+    padding: 20px;
+    flex-wrap: wrap;
+}
+
+.cert-button {
+    padding: 15px 25px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    background-color: rgba(54, 69, 79, 0.15); /* Translucent charcoal fill */
+    border: 2px solid #36454F;               /* Charcoal grey border */
+    color: #00FF00;                          /* Neon green text */
+    border-radius: 8px;
+    min-width: 250px;
+    text-align: center;
+    transition: background-color 0.3s; /* Smooth transition effect */
+}
+
+.cert-button:hover {
+    background-color: rgba(53, 62, 67, 0.25); /* Change background on hover */
+}
+
+
 
 @keyframes logo-spin {
   from {

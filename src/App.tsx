@@ -6,32 +6,6 @@ import Header from "./Header";
 import MatrixRain from "./components/MatrixRain"; 
 import Todos from "./components/Todos"; 
 
-// Define styles (placed outside the component to avoid re-creation on render)
-const certStyles = {
-    buttonContainer: {
-        display: 'flex',
-        justifyContent: 'center',
-        gap: '20px',
-        marginTop: '150px',
-        padding: '20px',
-        flexWrap: 'wrap',
-    } as const,
-    certButton: {
-        padding: '15px 25px',
-        fontSize: '18px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        backgroundColor: 'rgba(0, 255, 0, 0.15)', // Translucent green fill
-        border: '2px solid #00FF00',             // Neon green border
-        color: '#00FF00',                        // Neon green text
-        borderRadius: '8px',
-        minWidth: '250px',
-        textAlign: 'center' as const, // TSX requires 'as const' or explicit type for literal string styles
-        transition: 'background-color 0.3s'
-    } as const,
-};
-
-
 function App() { 
   const { authStatus } = useAuthenticator((context) => [
     context.authStatus,
@@ -46,14 +20,14 @@ function App() {
   // ⭐️ NEW FUNCTION: Renders the certification buttons in the main area
   const renderCertButtons = () => {
       return (
-          <div style={certStyles.buttonContainer}>
-              <button onClick={() => { console.log('Security+ clicked'); }} style={certStyles.certButton}>
+          <div className="button-container">
+              <button onClick={() => { console.log('Security+ clicked'); }} className="cert-button">
                   Security+ 🛡️
               </button>
-              <button onClick={() => { console.log('CISSP clicked'); }} style={certStyles.certButton}>
+              <button onClick={() => { console.log('CISSP clicked'); }} className="cert-button">
                   CISSP 🔒
               </button>
-              <button onClick={() => { console.log('AWS SA Pro clicked'); }} style={certStyles.certButton}>
+              <button onClick={() => { console.log('AWS SA Pro clicked'); }} className="cert-button">
                   AWS Solutions Architect Professional ☁️
               </button>
           </div>
