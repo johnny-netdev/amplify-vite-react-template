@@ -23,6 +23,11 @@ const ThreeDBackground: React.FC = () => {
       <Canvas 
         camera={{ 
           position: [0, 0, 80], // Camera position in 3D space
+          near: 0.1,           // Near clipping plane
+          far: 1000,          // Far clipping plane
+          aspect: window.innerWidth / window.innerHeight, // Aspect ratio
+          // Optional: Adjust the field of view for a more immersive effect
+          // Note: A wider FOV can create a more dramatic perspective        
           fov: 90             // Field of view
         }} 
         dpr={[1, 2]} // Performance: Limits the device pixel ratio
