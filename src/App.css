@@ -1,15 +1,27 @@
+/* Container for certification tiles */
+.cert-tiles-container {
+  background: rgba(30, 30, 30, 0.97);
+  border-radius: 24px;
+  border: 4px solid #00FF00;
+  box-shadow: 0 8px 32px 0 rgba(0,255,0,0.25), 0 2px 8px 0 rgba(0,0,0,0.25);
+  padding: 48px 32px;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 32px;
+  margin: 0 auto;
+  max-width: 900px;
+}
 /* Utility class to center content in viewport */
+
 .center-viewport {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1;
-  pointer-events: none; /* allow background events if needed */
+  width: 100%;
+  background: none;
+  border: none;
 }
 
 .center-viewport > .button-container {
@@ -43,8 +55,6 @@
   justify-content: center;
   align-items: center;
   gap: 32px;
-  margin-top: 100px;
-  padding: 32px 0;
   flex-wrap: nowrap;
 }
 
