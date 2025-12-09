@@ -3,7 +3,7 @@
 import { useState } from "react"; 
 import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react"; 
 import Header from "./Header";
-import ThreeDBackground from "./components/ThreeDBackground"; 
+import MatrixRain from "./components/MatrixRain"; 
 import Todos from "./components/Todos"; 
 
 // Define styles (placed outside the component to avoid re-creation on render)
@@ -62,7 +62,7 @@ function App() {
   
   return (
     <> 
-      <ThreeDBackground />
+      <MatrixRain />
 
       {/* Header now receives the toggle props */}
       <Header onToggleTodos={toggleTodos} showTodos={showTodos} /> 

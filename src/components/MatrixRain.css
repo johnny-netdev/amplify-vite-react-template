@@ -1,0 +1,10 @@
+/* src/MatrixRain.css */
+body {
+  margin: 0;
+  overflow: hidden;
+  background: black; /* Set a black background for the Matrix effect */
+}
+
+canvas {
+  display: block;
+}
