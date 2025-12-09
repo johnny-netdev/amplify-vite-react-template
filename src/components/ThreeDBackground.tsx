@@ -22,8 +22,8 @@ const ThreeDBackground: React.FC = () => {
       {/* This component sets up the WebGL context (the 3D viewport) */}
       <Canvas 
         camera={{ 
-          position: [0, 0, 60], // Camera position in 3D space
-          fov: 75             // Field of view
+          position: [0, 0, 80], // Camera position in 3D space
+          fov: 90             // Field of view
         }} 
         dpr={[1, 2]} // Performance: Limits the device pixel ratio
       >
