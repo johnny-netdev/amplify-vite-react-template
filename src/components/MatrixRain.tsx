@@ -46,7 +46,7 @@ const MatrixRain: React.FC = () => {
         const y = drop * fontSize;   // Calculate y position
 
         // Flicker effect for the lead character in every column
-        const flicker = Math.random() > 0.5;
+        const flicker = Math.random() > 0.9;
         ctx.save();
         ctx.globalAlpha = flicker ? 1 : 0.3 + Math.random() * 0.5;
         ctx.fillStyle = flicker ? '#fff' : '#0F0';
