@@ -1,3 +1,20 @@
+/* Utility class to center content in viewport */
+.center-viewport {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+  pointer-events: none; /* allow background events if needed */
+}
+
+.center-viewport > .button-container {
+  pointer-events: auto;
+}
 /* src/App.css */
 #root {
   max-width: 1280px;

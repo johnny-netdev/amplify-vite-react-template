@@ -19,19 +19,21 @@ function App() {
 
   // ⭐️ NEW FUNCTION: Renders the certification buttons in the main area
   const renderCertButtons = () => {
-      return (
-          <div className="button-container">
-              <button onClick={() => { console.log('Security+ clicked'); }} className="cert-button">
-                  Security+ 🛡️
-              </button>
-              <button onClick={() => { console.log('CISSP clicked'); }} className="cert-button">
-                  CISSP 🔒
-              </button>
-              <button onClick={() => { console.log('AWS SA Pro clicked'); }} className="cert-button">
-                  AWS Solutions Architect Professional ☁️
-              </button>
-          </div>
-      );
+    return (
+      <div className="center-viewport">
+        <div className="button-container">
+          <button onClick={() => { console.log('Security+ clicked'); }} className="cert-button">
+            Security+ 🛡️
+          </button>
+          <button onClick={() => { console.log('CISSP clicked'); }} className="cert-button">
+            CISSP 🔒
+          </button>
+          <button onClick={() => { console.log('AWS SA Pro clicked'); }} className="cert-button">
+            AWS Solutions Architect Professional ☁️
+          </button>
+        </div>
+      </div>
+    );
   };
   
   return (
