@@ -45,7 +45,21 @@ const MatrixRain: React.FC = () => {
         const x = index * fontSize; // Calculate x position
         const y = drop * fontSize;   // Calculate y position
 
-        ctx.fillText(character, x, y); // Render the character
+        // Flicker effect for the lead character (brightest, at the head of the drop)
+        if (drop === Math.max(...drops)) {
+          // This is the lead character in the column
+          // Flicker by randomly changing opacity or color
+          const flicker = Math.random() > 0.5;
+          ctx.save();
+          ctx.globalAlpha = flicker ? 1 : 0.3 + Math.random() * 0.5;
+          ctx.fillStyle = flicker ? '#fff' : '#b6ffb6';
+          ctx.fillText(character, x, y);
+          ctx.restore();
+        } else {
+          ctx.fillStyle = '#0F0'; // Green color for trailing characters
+          ctx.globalAlpha = 1;
+          ctx.fillText(character, x, y);
+        }
 
         // Reset the drop if it goes beyond the canvas
         if (y > canvas.height && Math.random() > 0.975) {
