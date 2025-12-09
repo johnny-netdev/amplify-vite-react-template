@@ -1,7 +1,6 @@
 import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three'; 
 import { useFrame } from '@react-three/fiber';
-import { Instances, Instance } from '@react-three/drei'; 
 import { Matrix4, Color } from 'three'; 
 
 // --- Configuration ---
@@ -16,19 +15,7 @@ const MIN_FLICKER_INTERVAL = 0.1;
 const MAX_FLICKER_INTERVAL = 0.4;
 
 // --- Global Helper Functions (No changes needed) ---
-const r = (from: number, to: number): number => {
-    return Math.floor(Math.random() * (to - from + 1)) + from;
-};
-const pick = (...args: any[]): any => {
-    return args[r(0, args.length - 1)];
-};
-const getChar = (): string => {
-    return String.fromCharCode(pick(
-        r(0x3041, 0x30ff), 
-        r(0x2000, 0x206f), 
-        r(0x0020, 0x003f)  
-    ));
-};
+
 // Note: We no longer need the 'randomChar' alias, as we're not using it to generate text content.
 
 
