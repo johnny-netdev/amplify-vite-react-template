@@ -19,33 +19,6 @@ main {
   align-items: stretch;
 }
 
-.cert-button {
-  border-radius: 18px !important;
-  border: 2px solid #00FF00 !important;
-  padding: 0 !important;
-  font-size: 1.25rem !important;
-  font-weight: 600 !important;
-  font-family: inherit;
-  background: rgba(30, 30, 30, 0.85) !important;
-  color: #00FF00 !important;
-  box-shadow: 0 4px 24px 0 rgba(0,255,0,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.12) !important;
-  width: 260px !important;
-  height: 180px !important;
-  display: flex !important;
-  flex-direction: column !important;
-  align-items: center !important;
-  justify-content: center !important;
-  margin: 0 8px 24px 8px !important;
-  text-align: center !important;
-  transition: transform 0.18s, box-shadow 0.18s, background 0.18s !important;
-  user-select: none;
-}
-.cert-button:hover {
-  background: rgba(0, 255, 0, 0.08) !important;
-  color: #fff !important;
-  transform: translateY(-6px) scale(1.04) !important;
-  box-shadow: 0 8px 32px 0 rgba(0,255,0,0.18), 0 2px 8px 0 rgba(0,0,0,0.18) !important;
-}
 
 ul {
   padding-inline-start: 0;
