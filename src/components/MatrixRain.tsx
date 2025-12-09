@@ -70,7 +70,15 @@ const MatrixRain: React.FC = () => {
       ref={canvasRef}
       width={window.innerWidth}
       height={window.innerHeight}
-      style={{ display: 'block', position: 'absolute', top: 0, left: 0 }}
+      style={{
+        display: 'block',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 0
+      }}
     />
   );
 };
