@@ -15,7 +15,7 @@ const MatrixRain: React.FC = () => {
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     const fontSize = 16;
     const columns = canvas.width / fontSize;
-    const drops: number[] = Array.from({ length: Math.floor(columns) }).fill(1);
+    const drops: number[] = Array.from({ length: Math.floor(columns) }, () => 1);
 
     const draw = () => {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
