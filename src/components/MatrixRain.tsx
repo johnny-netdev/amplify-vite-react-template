@@ -27,7 +27,7 @@ const CHARACTERS_DATA = Array.from({ length: TOTAL_CHARACTERS }).map((_, index) 
     
     // Position/Animation setup
     const startX = (Math.random() - 0.5) * FADE_DISTANCE;
-    const initialY = (Math.random() * 50) + 10;
+    const initialY = (Math.random() * 80) + 10; // Start Y position between 10 and 90
     const startZ = (Math.random() - 0.5) * FADE_DISTANCE;
     const speed = RAIN_SPEED * (Math.random() * 0.5 + 0.75);
 
