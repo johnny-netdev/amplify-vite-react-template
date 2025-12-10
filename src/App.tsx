@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react"; 
 import Header from "./Header";
 import MatrixRain from "./components/MatrixRain"; 
+import './App.css'; // Importing CSS for tile styles
 import Todos from "./components/Todos"; 
 
 function App() { 
@@ -25,24 +26,21 @@ function App() {
         style={{
           background: 'rgba(20,20,20,0.95)',
           zIndex: 9999,
-          minWidth: '600px',
           minHeight: '220px',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
           borderRadius: '24px',
-          border: '4px solid #222'
+          border: '4px solid #222',
+          boxSizing: 'border-box'
         }}
       >
-        <button onClick={() => { console.log('Security+ clicked'); }} className="cert-button">
+        <div className="cert-button" onClick={() => { console.log('Security+ clicked'); }} role="button" tabIndex={0}>
           Security+ 🛡️
-        </button>
-        <button onClick={() => { console.log('CISSP clicked'); }} className="cert-button">
+        </div>
+        <div className="cert-button" onClick={() => { console.log('CISSP clicked'); }} role="button" tabIndex={0}>
           CISSP 🔒
-        </button>
-        <button onClick={() => { console.log('AWS SA Pro clicked'); }} className="cert-button">
+        </div>
+        <div className="cert-button" onClick={() => { console.log('AWS SA Pro clicked'); }} role="button" tabIndex={0}>
           AWS Solutions Architect Professional ☁️
-        </button>
+        </div>
       </div>
     );
   };
@@ -53,8 +51,8 @@ function App() {
       <Header onToggleTodos={toggleTodos} showTodos={showTodos} />
       <main style={{ padding: "0 20px", position: 'relative', zIndex: 1, color: 'white', minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
         {/* Centered tiles inside main, only when authenticated and todos are hidden */}
-        <div style={{ width: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '40vh' }}>
-          {renderCertButtons()}
+        <div style={{ width: '100%', minHeight: '40vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+          {authStatus === 'authenticated' && renderCertButtons()}
         </div>
         {/* Conditionally render the Todos component (Kanban Board) */}
         {showTodos && <Todos />}

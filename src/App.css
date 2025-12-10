@@ -12,6 +12,8 @@
   gap: 32px;
   margin: 0 auto;
   max-width: 900px;
+  width: 100%;
+  box-sizing: border-box;
 }
 /* Utility class to center content in viewport */
 
@@ -29,10 +31,11 @@
 }
 /* src/App.css */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
   padding: 2rem;
   text-align: center;
+  width: 100vw;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .logo {
@@ -59,36 +62,6 @@
 }
 
 
-.cert-button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 260px;
-  height: 180px;
-  background: rgba(30, 30, 30, 0.85);
-  border: 2px solid #00FF00;
-  border-radius: 18px;
-  box-shadow: 0 4px 24px 0 rgba(0,255,0,0.08), 0 1.5px 6px 0 rgba(0,0,0,0.12);
-  color: #00FF00;
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  margin: 0 8px 24px 8px;
-  text-align: center;
-  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
-  user-select: none;
-}
-
-.cert-button:hover {
-  background: rgba(0, 255, 0, 0.08);
-  color: #fff;
-  transform: translateY(-6px) scale(1.04);
-  box-shadow: 0 8px 32px 0 rgba(0,255,0,0.18), 0 2px 8px 0 rgba(0,0,0,0.18);
-}
-
-
 
 @keyframes logo-spin {
   from {
@@ -105,10 +78,34 @@
   }
 }
 
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
+.cert-button {
+  all: unset;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 220px;
+  height: 160px;
+  background: repeating-linear-gradient(135deg, #ff00cc 0%, #3333ff 100%);
+  border: 5px dashed #ffeb3b;
+  border-radius: 28px;
+  box-shadow: 0 8px 32px 0 rgba(0,0,0,0.18), 0 2px 8px 0 rgba(0,255,0,0.10);
+  color: #fff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin: 0 18px 36px 18px;
+  text-align: center;
+  transition: transform 0.18s, box-shadow 0.18s, background 0.18s;
+  user-select: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  padding: 32px 18px;
+/* End of .cert-button styles */
+/* Removed stray closing brace */
+.cert-button:hover {
+  background: linear-gradient(135deg, #232526 0%, #00FF99 100%);
+  color: #fff;
+  transform: translateY(-6px) scale(1.04);
+  box-shadow: 0 12px 36px 0 rgba(0,255,0,0.18), 0 4px 16px 0 rgba(0,0,0,0.18);
 }
