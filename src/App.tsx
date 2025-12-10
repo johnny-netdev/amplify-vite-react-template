@@ -1,7 +1,8 @@
 // src/App.tsx
 
-import { useState } from "react"; 
+import { useState, useEffect } from "react"; 
 import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react"; 
+import { client } from "./amplify-client";
 import Header from "./Header";
 import MatrixRain from "./components/MatrixRain"; 
 import './App.css'; // Importing CSS for tile styles
@@ -12,18 +13,52 @@ import SecurityPlusApp from './apps/SecurityPlusApp';
 import AWSSAPApp from './apps/AWSSAPApp';
 
 function App() { 
-  const { authStatus } = useAuthenticator((context) => [
+  const { authStatus, user } = useAuthenticator((context) => [
     context.authStatus,
+    context.user,
   ]);
   
   const [showTodos, setShowTodos] = useState(false);
   const navigate = useNavigate();
 
+  useEffect(() => {
+    if (authStatus === 'authenticated' && user) {
+      const checkForProfile = async () => {
+        try {
+          const { data: profiles } = await client.models.UserProfile.list({
+            filter: {
+              userId: { eq: user.userId }
+            }
+          });
+
+          if (profiles.length === 0) {
+            console.log('No profile found, creating one...');
+            const { data: newProfile, errors } = await client.models.UserProfile.create({
+              userId: user.userId,
+              username: user.username,
+            });
+            if (errors) {
+              console.error('Error creating user profile:', errors);
+            } else {
+              console.log('Successfully created new user profile:', newProfile);
+            }
+          } else {
+            console.log('User profile already exists:', profiles[0]);
+          }
+        } catch (error) {
+          console.error('Error checking/creating user profile:', error);
+        }
+      };
+
+      checkForProfile();
+    }
+  }, [authStatus, user]);
+
   const toggleTodos = () => {
       setShowTodos(prev => !prev);
   };
 
-  // ⭐️ NEW FUNCTION: Renders the certification buttons in the main area
+  // Renders the certification buttons in the main area
   const renderCertButtons = () => {
     return (
       <div
@@ -55,24 +90,21 @@ function App() {
       <Route
         path="/"
         element={
-          <>
-            <MatrixRain />
-            <Header onToggleTodos={toggleTodos} showTodos={showTodos} />
-            <main style={{ padding: "0 20px", position: 'relative', zIndex: 1, color: 'white', minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-              <div style={{ width: '100%', minHeight: '40vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                {authStatus === 'authenticated' && renderCertButtons()}
-              </div>
-              {showTodos && <KanbanBoard />}
-              <div style={{ padding: '20px 0 0 0' }}>
-                🥳 App successfully hosted.
-                <br />
-                <a href="https://docs.amplify.aws/react/start/quickstart/#make-frontend-updates">
-                  Review next step of this tutorial.
-                </a>
-              </div>
-            </main>
+          authStatus === 'authenticated' ? (
+            <>
+              <MatrixRain />
+              <Header onToggleTodos={toggleTodos} showTodos={showTodos} />
+              <main style={{ padding: "0 20px", position: 'relative', zIndex: 1, color: 'white', minHeight: '80vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '100%', minHeight: '40vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                  {renderCertButtons()}
+                </div>
+                {showTodos && <KanbanBoard />}
+              </main>
+              <Authenticator />
+            </>
+          ) : (
             <Authenticator />
-          </>
+          )
         }
       />
       <Route path="/securityplus" element={<SecurityPlusApp />} />
