@@ -1,12 +1,12 @@
 import React from 'react';
-import CompetencyDashboard from './CompetencyDashboard';
+import AWSSAPDashboard from './AWSSAPDashboard';
 
 const AWSSAPApp: React.FC = () => {
   return (
     <div style={{ padding: '2rem', textAlign: 'center' }}>
       <h1>AWS Solutions Architect Professional App</h1>
       <p>Welcome! This app will help you master AWS SA Pro topics through gamified learning and quizzes.</p>
-      <CompetencyDashboard />
+  <AWSSAPDashboard />
     </div>
   );
 };

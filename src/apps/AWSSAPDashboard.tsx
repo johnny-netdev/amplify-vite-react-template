@@ -1,20 +1,18 @@
 import React from 'react';
 
-// Example weights for AWS SA Pro domains (adjust as needed)
+// AWS SA Pro domains and weights (2023)
 const domainWeights: Record<string, number> = {
-  DesignForOrganizationComplexity: 0.26,
-  DesignForNewSolutions: 0.31,
-  MigrationPlanning: 0.15,
-  CostControl: 0.12,
-  ContinuousImprovement: 0.16,
+  DesignSolutionsForOrganizationalComplexity: 0.26,
+  DesignForNewSolutions: 0.29,
+  ContinuousImprovementForExistingSolutions: 0.25,
+  AccelerateWorkloadMigrationAndModernization: 0.20,
 };
 
 const userScores: Record<string, number> = {
-  DesignForOrganizationComplexity: 0.8,
+  DesignSolutionsForOrganizationalComplexity: 0.8,
   DesignForNewSolutions: 0.7,
-  MigrationPlanning: 0.6,
-  CostControl: 0.9,
-  ContinuousImprovement: 0.75,
+  ContinuousImprovementForExistingSolutions: 0.6,
+  AccelerateWorkloadMigrationAndModernization: 0.9,
 };
 
 const totalWeight = Object.values(domainWeights).reduce((a, b) => a + b, 0);
@@ -47,7 +45,17 @@ const AWSSAPDashboard: React.FC = () => {
         <ul style={{ listStyle: 'none', padding: 0 }}>
           {Object.keys(domainWeights).map(domain => (
             <li key={domain} style={{ marginBottom: 8 }}>
-              <span style={{ fontWeight: 500 }}>{domain.replace(/([A-Z])/g, ' $1').trim()}:</span>
+              <span style={{ fontWeight: 500 }}>
+                {(() => {
+                  switch(domain) {
+                    case 'DesignSolutionsForOrganizationalComplexity': return 'Design Solutions for Organizational Complexity';
+                    case 'DesignForNewSolutions': return 'Design for New Solutions';
+                    case 'ContinuousImprovementForExistingSolutions': return 'Continuous Improvement for Existing Solutions';
+                    case 'AccelerateWorkloadMigrationAndModernization': return 'Accelerate Workload Migration and Modernization';
+                    default: return domain;
+                  }
+                })()}
+              </span>:
               {' '}
               <span style={{ color: '#357ae8' }}>{Math.round((userScores[domain] || 0) * 100)}%</span>
               {' '}<span style={{ color: '#888', fontSize: '0.9em' }}>(Weight: {Math.round(domainWeights[domain] * 100)}%)</span>
