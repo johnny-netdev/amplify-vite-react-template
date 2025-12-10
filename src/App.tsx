@@ -5,7 +5,7 @@ import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react";
 import Header from "./Header";
 import MatrixRain from "./components/MatrixRain"; 
 import './App.css'; // Importing CSS for tile styles
-import Todos from "./components/Todos";
+import KanbanBoard from "./components/KanbanBoard";
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import CISSPApp from './apps/CISSPApp';
 import SecurityPlusApp from './apps/SecurityPlusApp';
@@ -62,7 +62,7 @@ function App() {
               <div style={{ width: '100%', minHeight: '40vh', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
                 {authStatus === 'authenticated' && renderCertButtons()}
               </div>
-              {showTodos && <Todos />}
+              {showTodos && <KanbanBoard />}
               <div style={{ padding: '20px 0 0 0' }}>
                 🥳 App successfully hosted.
                 <br />
