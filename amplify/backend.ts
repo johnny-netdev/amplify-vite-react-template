@@ -2,7 +2,10 @@ import { defineBackend } from '@aws-amplify/backend';
 import { auth } from './auth/resource';
 import { data } from './data/resource';
 
-defineBackend({
+/**
+ * @see https://docs.amplify.aws/react/build-a-backend/to-do-list/
+ */
+export const backend = defineBackend({
   auth,
   data,
 });
