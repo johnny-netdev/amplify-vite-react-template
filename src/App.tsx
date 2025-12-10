@@ -36,6 +36,7 @@ function App() {
             const { data: newProfile, errors } = await client.models.UserProfile.create({
               userId: user.userId,
               username: user.username,
+              bio: "This is a default bio.",
             });
             if (errors) {
               console.error('Error creating user profile:', errors);

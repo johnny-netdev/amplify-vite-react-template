@@ -5,6 +5,7 @@ const schema = a.schema({
     .model({
       userId: a.string().required(),
       username: a.string().required(),
+      bio: a.string(),
       profilePictureUrl: a.url(),
       createdAt: a.datetime(),
       updatedAt: a.datetime(),
