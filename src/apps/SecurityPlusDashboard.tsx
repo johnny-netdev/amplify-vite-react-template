@@ -1,22 +1,21 @@
 import React from 'react';
 
-// Example weights for Security+ domains (adjust as needed)
+// Security+ (SY0-701) domains and weights
 const domainWeights: Record<string, number> = {
-  ThreatsAttacksVulnerabilities: 0.21,
-  TechnologiesAndTools: 0.22,
-  ArchitectureAndDesign: 0.15,
-  IdentityAndAccessManagement: 0.16,
-  RiskManagement: 0.14,
-  CryptographyAndPKI: 0.12,
+  GeneralSecurityConcepts: 0.12,
+  ThreatsVulnerabilitiesMitigations: 0.22,
+  SecurityArchitecture: 0.18,
+  SecurityOperations: 0.28,
+  SecurityProgramManagementOversight: 0.20,
 };
 
+// Example user scores (0-1 scale)
 const userScores: Record<string, number> = {
-  ThreatsAttacksVulnerabilities: 0.7,
-  TechnologiesAndTools: 0.8,
-  ArchitectureAndDesign: 0.6,
-  IdentityAndAccessManagement: 0.5,
-  RiskManagement: 0.9,
-  CryptographyAndPKI: 0.75,
+  GeneralSecurityConcepts: 0.7,
+  ThreatsVulnerabilitiesMitigations: 0.8,
+  SecurityArchitecture: 0.6,
+  SecurityOperations: 0.5,
+  SecurityProgramManagementOversight: 0.9,
 };
 
 const totalWeight = Object.values(domainWeights).reduce((a, b) => a + b, 0);
@@ -49,7 +48,18 @@ const SecurityPlusDashboard: React.FC = () => {
         <ul style={{ listStyle: 'none', padding: 0 }}>
           {Object.keys(domainWeights).map(domain => (
             <li key={domain} style={{ marginBottom: 8 }}>
-              <span style={{ fontWeight: 500 }}>{domain.replace(/([A-Z])/g, ' $1').trim()}:</span>
+              <span style={{ fontWeight: 500 }}>
+                {(() => {
+                  switch(domain) {
+                    case 'GeneralSecurityConcepts': return 'General security concepts';
+                    case 'ThreatsVulnerabilitiesMitigations': return 'Threats, vulnerabilities, and mitigations';
+                    case 'SecurityArchitecture': return 'Security architecture';
+                    case 'SecurityOperations': return 'Security operations';
+                    case 'SecurityProgramManagementOversight': return 'Security program management and oversight';
+                    default: return domain;
+                  }
+                })()}
+              </span>:
               {' '}
               <span style={{ color: '#357ae8' }}>{Math.round((userScores[domain] || 0) * 100)}%</span>
               {' '}<span style={{ color: '#888', fontSize: '0.9em' }}>(Weight: {Math.round(domainWeights[domain] * 100)}%)</span>
