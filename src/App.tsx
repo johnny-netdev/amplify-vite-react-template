@@ -8,6 +8,8 @@ import './App.css'; // Importing CSS for tile styles
 import Todos from "./components/Todos";
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import CISSPApp from './apps/CISSPApp';
+import SecurityPlusApp from './apps/SecurityPlusApp';
+import AWSSAPApp from './apps/AWSSAPApp';
 
 function App() { 
   const { authStatus } = useAuthenticator((context) => [
@@ -35,13 +37,13 @@ function App() {
           boxSizing: 'border-box'
         }}
       >
-        <div className="cert-button" onClick={() => { console.log('Security+ clicked'); }} role="button" tabIndex={0}>
+        <div className="cert-button" onClick={() => { navigate('/securityplus'); }} role="button" tabIndex={0}>
           Security+ 🛡️
         </div>
         <div className="cert-button" onClick={() => { navigate('/CISSP'); }} role="button" tabIndex={0}>
           CISSP 🔒
         </div>
-        <div className="cert-button" onClick={() => { console.log('AWS SA Pro clicked'); }} role="button" tabIndex={0}>
+        <div className="cert-button" onClick={() => { navigate('/awssap'); }} role="button" tabIndex={0}>
           AWS Solutions Architect Professional ☁️
         </div>
       </div>
@@ -73,7 +75,9 @@ function App() {
           </>
         }
       />
+      <Route path="/securityplus" element={<SecurityPlusApp />} />
       <Route path="/CISSP" element={<CISSPApp />} />
+      <Route path="/awssap" element={<AWSSAPApp />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );
