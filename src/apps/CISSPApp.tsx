@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
-import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constants';
+import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
 import CompetencyDashboard from './CompetencyDashboard';
 
 // Initialize the data client
