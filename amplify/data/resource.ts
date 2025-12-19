@@ -7,18 +7,32 @@ const schema = a.schema({
       username: a.string().required(),
       bio: a.string(),
       profilePictureUrl: a.url(),
-      createdAt: a.datetime(),
-      updatedAt: a.datetime(),
     })
-    .authorization(allow => [allow.owner()]),
+    .authorization(allow => [allow.owner()])
+    .secondaryIndexes((index) => [index("userId")]),
   Task: a
     .model({
       taskId: a.string().required(),
       title: a.string().required(),
       description: a.string(),
       status: a.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED']),
-      createdAt: a.datetime(),
-      updatedAt: a.datetime(),
+    })
+    .authorization(allow => [allow.owner()]),
+  CisspVisual: a
+    .model({
+      title: a.string().required(),
+      description: a.string(),
+      domain: a.enum([
+        'RISK_MGMT',
+        'ASSET_SEC', 
+        'SEC_ARCH_ENG', 
+        'COMM_NET_SEC', 
+        'IAM', 
+        'SEC_ASSESS_TEST', 
+        'SEC_OPS', 
+        'SOFTWARE_DEV_SEC'
+      ]),
+      s3Path: a.string().required(), // Location of the image in S3
     })
     .authorization(allow => [allow.owner()]),
 });
@@ -31,5 +45,3 @@ export const data = defineData({
     defaultAuthorizationMode: 'userPool'
   },
 });
-
-
