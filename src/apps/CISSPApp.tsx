@@ -51,13 +51,25 @@ const CISSPApp: React.FC = () => {
     const confirmDelete = window.confirm(`Permanently delete "${visual.title}"?`);
     if (!confirmDelete) return;
 
-    try {
-        await remove({ path: visual.s3Path });
-        await client.models.CisspVisual.delete({ id: visual.id });
-        if (selectedVisual?.id === visual.id) setSelectedVisual(null);
-        alert("Purge complete.");
-    } catch (err) {
-        console.error("Deletion failed:", err);
+    try { // ⭐️ Add a 'try' block here to wrap the entire operation
+      // 1. Try to delete from S3 only if path exists
+      if (visual.s3Path) {
+        try {
+          await remove({ path: visual.s3Path });
+        } catch (s3Err) {
+          console.warn("S3 file already missing or inaccessible, proceeding to DB wipe.");
+        }
+      }
+  
+      // 2. Delete from DynamoDB (the important part)
+      await client.models.CisspVisual.delete({ id: visual.id });
+      
+      // 3. Clear selection and update UI
+      setSelectedVisual(null);
+      alert("Purge successful: Database record de-provisioned.");
+    } catch (err) { // This 'catch' now correctly corresponds to the 'try' above
+      console.error("Critical Failure during purge:", err);
+      alert("Purge failed. Check console for details.");
     }
   };
 
