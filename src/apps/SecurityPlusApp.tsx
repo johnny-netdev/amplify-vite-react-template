@@ -17,7 +17,7 @@ const SEC_PLUS_DOMAINS = [
   "Governance, Risk & Compliance"
 ];
 
-const SecurityPlusApp: React.FC<Props> = ({ viewMode, setViewMode }) => {
+const SecurityPlusApp: React.FC<Props> = ({ viewMode }) => {
   const [showAdmin, setShowAdmin] = useState(false);
 
   return (
@@ -30,7 +30,7 @@ const SecurityPlusApp: React.FC<Props> = ({ viewMode, setViewMode }) => {
         <div style={v.header}>
           <h1 style={v.title}>VAULT_ACCESS // SECURITY+</h1>
           <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
-            {showAdmin ? '[ CLOSE ]' : '[ ADMIN ]'}
+            {showAdmin ? '[ CLOSE ]' : '[ ADMIN_ACCESS ]'}
           </button>
         </div>
 

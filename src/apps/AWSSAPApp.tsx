@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SOCDashboard from './CISSP_Dashboard';
 
 interface VaultAppProps {
@@ -14,27 +14,33 @@ const AWS_SAP_DOMAINS = {
 };
 
 const AWSSAPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
+  const [showAdmin, setShowAdmin] = useState(false);
   return (
-    <div style={vaultStyles.container}>
-      <video autoPlay loop muted playsInline style={vaultStyles.bgVideo}>
+     <div style={v.container}>
+      <video autoPlay loop muted playsInline style={v.video}>
         <source src="/backgrounds/3d_moving_hex_background.mp4" type="video/mp4" />
       </video>
-
-      <div style={vaultStyles.content}>
-        <h1 style={vaultStyles.title}>VAULT_ACCESS // AWS SAP-C02</h1>
+      
+      <div style={v.content}>
+        <div style={v.header}>
+          <h1 style={v.title}>VAULT_ACCESS // AWS Solutions Architect Professional</h1>
+          <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
+            {showAdmin ? '[ CLOSE ]' : '[ ADMIN_ACCESS ]'}
+          </button>
+        </div>
 
         {viewMode === 'STRATEGIC' ? (
           <SOCDashboard />
         ) : (
           <div style={{ display: 'flex', gap: '2rem', height: '80vh' }}>
-            <aside style={vaultStyles.sidebar}>
-              <h3 style={vaultStyles.sidebarHeader}>ARCHITECTURAL_PILLARS</h3>
+            <aside style={v.sidebar}>
+              <h3 style={v.header}>ARCHITECTURAL_PILLARS</h3>
               {Object.entries(AWS_SAP_DOMAINS).map(([key, label]) => (
-                <div key={key} style={vaultStyles.domainItem}>[ {label} ]</div>
+                <div key={key} style={v.item}>[ {label} ]</div>
               ))}
             </aside>
-            <main style={vaultStyles.mainArea}>
-              <div style={vaultStyles.idleText}>AWAITING_CLOUD_SCHEMA_LOAD...</div>
+            <main style={v.main}>
+              <div style={v.main}>AWAITING_CLOUD_SCHEMA_LOAD...</div>
             </main>
           </div>
         )}
@@ -42,16 +48,19 @@ const AWSSAPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
     </div>
   );
 };
-const vaultStyles = {
-  container: { position: 'relative' as const, minHeight: '100vh', width: '100vw', overflow: 'hidden', color: 'white' },
-  bgVideo: { position: 'fixed' as const, top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' as const, zIndex: -1, opacity: 0.4 },
-  content: { padding: '2rem', paddingTop: '100px', maxWidth: '1600px', margin: '0 auto' },
-  title: { color: '#00ff41', fontSize: '1.5rem', textAlign: 'center' as const, marginBottom: '2rem', letterSpacing: '4px' },
-  sidebar: { width: '350px', background: 'rgba(10, 10, 10, 0.8)', backdropFilter: 'blur(10px)', padding: '1.5rem', borderRadius: '12px', border: '1px solid #333' },
-  sidebarHeader: { fontSize: '0.7rem', color: '#666', letterSpacing: '2px', marginBottom: '1rem' },
-  domainItem: { padding: '10px', fontSize: '0.8rem', color: '#00ff41', cursor: 'pointer', borderBottom: '1px solid #222' },
-  mainArea: { flex: 1, background: 'rgba(0, 0, 0, 0.6)', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  idleText: { color: '#333', letterSpacing: '3px', fontWeight: 'bold' }
+
+const v = {
+  container: { position: 'relative' as const, minHeight: '100vh', color: 'white' },
+  video: { position: 'fixed' as const, top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' as const, zIndex: -1, opacity: 0.4 },
+  content: { padding: '2rem', paddingTop: '80px', maxWidth: '1400px', margin: '0 auto' },
+  header: { position: 'relative' as const, textAlign: 'center' as const, marginBottom: '2rem' },
+  title: { color: '#00ff41', letterSpacing: '4px', fontSize: '1.5rem' },
+  adminBtn: { position: 'absolute' as const, right: 0, top: 0, background: 'transparent', color: '#00ff41', border: '1px solid #00ff41', cursor: 'pointer', padding: '5px 10px', fontSize: '0.8rem' },
+  uploadPanel: { background: 'rgba(0,20,0,0.9)', padding: '20px', border: '1px solid #00ff41', marginBottom: '20px', borderRadius: '8px' },
+  tactical: { display: 'flex', gap: '20px', height: '75vh' },
+  sidebar: { width: '350px', background: 'rgba(10,10,10,0.8)', padding: '20px', border: '1px solid #333', borderRadius: '12px', overflowY: 'auto' as const },
+  item: { padding: '12px 10px', color: '#00ff41', fontSize: '0.75rem', borderBottom: '1px solid #1a1a1a', cursor: 'pointer', fontFamily: 'monospace' },
+  main: { flex: 1, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', borderRadius: '12px', border: '1px solid #222', letterSpacing: '2px' }
 };
 
 export default AWSSAPApp;

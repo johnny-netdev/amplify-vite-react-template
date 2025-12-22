@@ -17,7 +17,7 @@ interface CISSPAppProps {
   setViewMode: React.Dispatch<React.SetStateAction<'LOBBY' | 'STRATEGIC' | 'TACTICAL'>>;
 }
 
-const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode, setViewMode }) => {
+const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
   const [visuals, setVisuals] = useState<Schema['CisspVisual']['type'][]>([]);
   const [selectedVisual, setSelectedVisual] = useState<Schema['CisspVisual']['type'] | null>(null);
   
