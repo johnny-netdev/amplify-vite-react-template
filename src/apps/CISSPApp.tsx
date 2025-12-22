@@ -92,7 +92,7 @@ const CISSPApp: React.FC = () => {
             opacity: 0.5 // Adjust this for darkness level
         }}
         >
-        <source src="public/backgrounds/3d_moving_hex_background.mp4" type="video/mp4" />
+        <source src="/backgrounds/3d_moving_hex_background.mp4" type="video/mp4" />
         </video>
 
         {/* 2. VIGNETTE OVERLAY (Focus Layer) */}
