@@ -6,21 +6,20 @@ import type { Schema } from '../../amplify/data/resource';
 import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
 import { InteractiveVisual } from '../cissp/InteractiveVisual';
 import { remove } from 'aws-amplify/storage';
+// ⭐️ Ensure this matches your specific dashboard file name
 import SOCDashboard from './CISSP_Dashboard';
 
 const client = generateClient<Schema>();
 
-// 1. Define the Props interface to accept state from App.tsx
+// 1. Updated Interface to match the Dispatch type from App.tsx
 interface CISSPAppProps {
   viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
-  setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
+  setViewMode: React.Dispatch<React.SetStateAction<'LOBBY' | 'STRATEGIC' | 'TACTICAL'>>;
 }
 
 const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode, setViewMode }) => {
   const [visuals, setVisuals] = useState<Schema['CisspVisual']['type'][]>([]);
   const [selectedVisual, setSelectedVisual] = useState<Schema['CisspVisual']['type'] | null>(null);
-  
-  // ⭐️ INTERNAL viewMode STATE REMOVED - Now using props from Global Header
   
   const [showUpload, setShowUpload] = useState(false);
   const [formData, setFormData] = useState({ title: '', domain: 'RISK_MGMT', description: '' });
@@ -102,7 +101,6 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode, setViewMode }) => {
         {/* APP CONTENT LAYER */}
         <div style={{ padding: '1rem', color: 'white', maxWidth: '1600px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
             
-            {/* Header simplified as the Global Header is now the main branding */}
             <header style={{ textAlign: 'center', marginBottom: '1rem', position: 'relative' }}>
               <h1 style={{ color: '#00ff41', fontSize: '1.5rem', textShadow: '0 0 10px #00ff41', opacity: 0.8 }}>
                 VAULT_ACCESS // CISSP
@@ -118,8 +116,6 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode, setViewMode }) => {
                   {showUpload ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
               </button>
             </header>
-
-            {/* ⭐️ LOCAL NAVIGATION REMOVED - Handled by Global Header.tsx */}
 
             {showUpload && (
               <div style={{ background: 'rgba(0, 20, 0, 0.8)', backdropFilter: 'blur(10px)', border: '2px solid #00ff41', padding: '2rem', marginBottom: '2rem', borderRadius: '12px' }}>
@@ -153,7 +149,7 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode, setViewMode }) => {
               </div>
             )}
 
-            {/* ⭐️ DYNAMIC VIEW SWITCHING */}
+            {/* DYNAMIC VIEW SWITCHING */}
             {viewMode === 'STRATEGIC' ? (
               <SOCDashboard />
             ) : (
