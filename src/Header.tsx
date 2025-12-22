@@ -1,28 +1,47 @@
 import React from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-// Define the component's props if needed (optional for now)
 interface HeaderProps {
-  // ⭐️ This is the function passed from App.tsx to toggle visibility
-    onToggleTodos: () => void; 
-    
-    // ⭐️ This is the boolean state passed from App.tsx to determine button text
-    showTodos: boolean;
+  onToggleTodos: () => void; 
+  showTodos: boolean;
+  context: 'LOBBY' | 'VAULT'; 
+  viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
+  setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onToggleTodos, showTodos }) => {
-  // Use the Authenticator hook to show/hide the correct button
+const Header: React.FC<HeaderProps> = ({ onToggleTodos, showTodos, context, viewMode, setViewMode }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Use the Authenticator hook
   const { authStatus, signOut, toSignIn } = useAuthenticator((context) => [
     context.authStatus,
     context.signOut,
     context.toSignIn,
   ]);
 
+  const currentVault = location.pathname.substring(1); 
+  const isVault = location.pathname !== '/';
+
+  const handleModeChange = (mode: 'STRATEGIC' | 'TACTICAL') => {
+    setViewMode(mode);
+    if (currentVault) {
+      navigate(`/${currentVault}`);
+    }
+  };
+
+  const handleLogoClick = () => {
+    setViewMode('LOBBY');
+    navigate('/');
+  };
+
+  // --- Helper Render Functions ---
   const renderAuthButton = () => {
     if (authStatus === 'authenticated') {
       return (
-        <button onClick={signOut} style={styles.navButton}>
-          Sign Out
+        <button onClick={signOut} style={styles.authButton}>
+          [ DISCONNECT ]
         </button>
       );
     } 
@@ -33,73 +52,116 @@ const Header: React.FC<HeaderProps> = ({ onToggleTodos, showTodos }) => {
     );
   };
 
-  // ⭐️ NEW KANBAN BUTTON LOGIC (Always available to open the tool)
   const renderKanbanButton = () => {
-      const buttonText = showTodos ? 'Hide Kanban' : 'Show Kanban Board';
-
-      return (
-          <button onClick={onToggleTodos} style={styles.navButton}>
-              {buttonText}
-          </button>
-      );
+    return (
+      <button onClick={onToggleTodos} style={showTodos ? styles.activeNavButton : styles.navButton}>
+        {showTodos ? 'CLOSE_KANBAN' : 'OPEN_KANBAN'}
+      </button>
+    );
   };
 
   return (
     <header style={styles.header}>
-      {/* ⭐️ 1. Logo Area */}
-      <div style={styles.logo}>
-        ⚛️ **My Amplify App**
+      {/* 1. BRANDING & HOME NAVIGATION */}
+      <div style={styles.logo} onClick={handleLogoClick}>
+        <span style={{ color: '#00ff41', marginRight: '8px' }}>⚛️</span>
+        <span style={{ letterSpacing: '2px' }}>SIGNAL_ONE</span>
       </div>
 
-      {/* ⭐️ 2. Navigation Area */}
+      {/* 2. DYNAMIC NAVIGATION AREA */}
       <nav style={styles.nav}>
-        {/* Example Navigation Buttons */}
-        <button style={styles.navButton}>Home</button>
-        <button style={styles.navButton}>About</button>
+        {/* Only show these buttons if we aren't in the Lobby */}
+        {isVault && (
+          <div style={styles.vaultNavGroup}>
+            <button 
+              onClick={() => handleModeChange('STRATEGIC')} 
+              style={viewMode === 'STRATEGIC' ? styles.activeNavButton : styles.navButton}
+            >
+              [ STRATEGIC_SOC ]
+            </button>
+            <button 
+              onClick={() => handleModeChange('TACTICAL')} 
+              style={viewMode === 'TACTICAL' ? styles.activeNavButton : styles.navButton}
+            >
+              [ TACTICAL_VAULT ]
+            </button>
+          </div>
+        )}
         
-        {/* ⭐️ Kanban Button */}
         {renderKanbanButton()}
-
-        {/* ⭐️ 3. Authentication Button (from your previous App.tsx logic) */}
         {renderAuthButton()}
       </nav>
     </header>
   );
 };
 
-// Basic CSS Styling (You should move this to a separate CSS file later)
 const styles: { [key: string]: React.CSSProperties } = {
   header: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: '15px 20px',
-    backgroundColor: '#333',
+    padding: '10px 25px',
+    backgroundColor: 'rgba(5, 5, 5, 0.8)', 
+    backdropFilter: 'blur(15px)',
     color: 'white',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    borderBottom: '1px solid rgba(0, 255, 65, 0.2)',
     width: '100%',
     boxSizing: 'border-box',
-    margin: '0',
-    minHeight: '60px', // Ensures header is tall enough
-    position: 'relative', // Helps with stacking context
-    zIndex: 10, // Ensures header is above other content
- },
+    position: 'sticky',
+    top: 0,
+    zIndex: 1000,
+  },
   logo: {
-    fontSize: '1.5em',
+    fontSize: '1.2rem',
     fontWeight: 'bold',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
   },
   nav: {
     display: 'flex',
-    gap: '10px', // Space between buttons
+    alignItems: 'center',
+    gap: '12px',
+  },
+  vaultNavGroup: {
+    display: 'flex',
+    gap: '10px',
+    marginRight: '20px',
+    borderRight: '1px solid #333',
+    paddingRight: '20px'
   },
   navButton: {
-    padding: '8px 15px',
-    backgroundColor: '#555',
-    color: 'white',
-    border: 'none',
+    padding: '6px 15px',
+    backgroundColor: 'transparent',
+    color: '#00ff41',
+    border: '1px solid #333',
     borderRadius: '4px',
     cursor: 'pointer',
+    fontSize: '0.75rem',
+    fontFamily: 'monospace',
+    transition: '0.2s',
   },
+  activeNavButton: {
+    padding: '6px 15px',
+    backgroundColor: '#00ff41',
+    color: 'black',
+    border: '1px solid #00ff41',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '0.75rem',
+    fontFamily: 'monospace',
+    fontWeight: 'bold',
+  },
+  authButton: {
+    padding: '6px 15px',
+    backgroundColor: 'transparent',
+    color: '#ff4b2b',
+    border: '1px solid #ff4b2b',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '0.75rem',
+    fontFamily: 'monospace',
+  }
 };
 
 export default Header;
