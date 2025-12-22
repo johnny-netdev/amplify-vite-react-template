@@ -11,7 +11,6 @@ import SecurityPlusApp from './apps/SecurityPlusApp';
 import AWSSAPApp from './apps/AWSSAPApp';
 import KanbanBoard from "./components/KanbanBoard";
 
-
 function App() { 
   const { authStatus, user } = useAuthenticator((context) => [
     context.authStatus,
@@ -20,8 +19,18 @@ function App() {
   
   const [showTodos, setShowTodos] = useState(false);
   const navigate = useNavigate();
-  const location = useLocation(); // To track current path for the Header context
-  const [viewMode, setViewMode] = useState<'LOBBY' | 'STRATEGIC' | 'TACTICAL'>('LOBBY');
+  const location = useLocation();
+
+  // 1. PERSISTENCE ENGINE: Initialize state from localStorage to prevent refresh resets
+  const [viewMode, setViewMode] = useState<'LOBBY' | 'STRATEGIC' | 'TACTICAL'>(() => {
+    const saved = localStorage.getItem('vaultViewMode');
+    return (saved as 'LOBBY' | 'STRATEGIC' | 'TACTICAL') || 'LOBBY';
+  });
+
+  // 2. Sync viewMode to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('vaultViewMode', viewMode);
+  }, [viewMode]);
 
   // Sync profile logic
   useEffect(() => {
@@ -55,13 +64,12 @@ function App() {
     ];
 
     return (
-      /* ⭐️ Wrap the buttons in the Glassmorphism Container */
       <div style={styles.certGrid}>
         {certifications.map((cert) => (
           <div
             key={cert.id}
             onClick={() => {
-              setViewMode('STRATEGIC'); 
+              setViewMode('STRATEGIC'); // Default to Strategic Dashboard on entry
               navigate(cert.path);      
             }}
             style={styles.certTile}
@@ -77,11 +85,12 @@ function App() {
   
   return (
     <div style={{ position: 'relative', minHeight: '100vh', backgroundColor: '#000' }}>
-      {/* 1. HEADER (Remains global so it's always there) */}
+      {/* 1. GLOBAL HEADER */}
       {authStatus === 'authenticated' && (
         <Header 
           onToggleTodos={() => setShowTodos(!showTodos)} 
           showTodos={showTodos}
+          // Simple context check: if on root, it's Lobby, otherwise it's a Vault
           context={location.pathname === '/' ? 'LOBBY' : 'VAULT'}
           viewMode={viewMode}
           setViewMode={setViewMode}
@@ -107,15 +116,20 @@ function App() {
               )
             }
           />
-          {/* ⭐️ Pass viewMode down so the Vaults know which screen to show */}
+
+          {/* VAULT ROUTES: Passing viewMode and setViewMode to all apps */}
           <Route path="/securityplus" element={<SecurityPlusApp viewMode={viewMode} setViewMode={setViewMode} />} />
           <Route path="/CISSP" element={<CISSPApp viewMode={viewMode} setViewMode={setViewMode} />} />
           <Route path="/awssap" element={<AWSSAPApp viewMode={viewMode} setViewMode={setViewMode} />} />
+          
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
+
         {showTodos && (
-          <div style={styles.kanbanOverlay}>
-            <KanbanBoard />
+          <div style={styles.kanbanOverlay} onClick={() => setShowTodos(false)}>
+            <div onClick={(e) => e.stopPropagation()}>
+              <KanbanBoard />
+            </div>
           </div>
         )}
       </main>
@@ -123,7 +137,6 @@ function App() {
   );
 }
 
-// Visual Styling for Signal One Aesthetics
 const styles = {
   lobbyContainer: {
     display: 'flex', 
@@ -138,9 +151,9 @@ const styles = {
     color: '#00ff41',
     letterSpacing: '5px',
     marginBottom: '2rem',
-    textShadow: '0 0 10px #00ff41'
+    textShadow: '0 0 10px #00ff41',
+    fontFamily: 'monospace'
   },
-  // The Glassmorphism Container for the buttons
   certGrid: {
     background: 'rgba(255, 255, 255, 0.05)',
     backdropFilter: 'blur(10px)',
@@ -162,24 +175,13 @@ const styles = {
     cursor: 'pointer',
     borderRadius: '8px',
     transition: '0.3s',
-    letterSpacing: '2px'
+    letterSpacing: '2px',
+    fontFamily: 'monospace',
+    textAlign: 'center' as const
   },
-  tileHeader: {
-    fontSize: '1.5rem',
-    fontWeight: 'bold',
-    marginBottom: '5px'
-  },
-  tileDesc: {
-    fontSize: '0.8rem',
-    opacity: 0.7,
-    marginBottom: '10px'
-  },
-  tileFooter: {
-    fontSize: '0.7rem',
-    borderTop: '1px solid rgba(0, 255, 65, 0.3)',
-    paddingTop: '10px',
-    marginTop: 'auto'
-  },
+  tileHeader: { fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '5px' },
+  tileDesc: { fontSize: '0.8rem', opacity: 0.7, marginBottom: '10px' },
+  tileFooter: { fontSize: '0.7rem', borderTop: '1px solid rgba(0, 255, 65, 0.3)', paddingTop: '10px', marginTop: 'auto' },
   kanbanOverlay: {
     position: 'fixed',
     top: 0,
@@ -187,7 +189,7 @@ const styles = {
     width: '100vw',
     height: '100vh',
     zIndex: 100,
-    background: 'rgba(0,0,0,0.7)',
+    background: 'rgba(0,0,0,0.85)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center'

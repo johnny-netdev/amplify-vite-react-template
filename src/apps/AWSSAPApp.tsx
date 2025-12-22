@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import SOCDashboard from './CISSP_Dashboard';
+import AWSSAPDashboard from './AWS_SAP_Dashboard';
 
 interface VaultAppProps {
   viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
@@ -30,7 +30,7 @@ const AWSSAPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
         </div>
 
         {viewMode === 'STRATEGIC' ? (
-          <SOCDashboard />
+          <AWSSAPDashboard />
         ) : (
           <div style={{ display: 'flex', gap: '2rem', height: '80vh' }}>
             <aside style={v.sidebar}>
