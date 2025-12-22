@@ -10,11 +10,11 @@ interface HeaderProps {
   setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ onToggleTodos, showTodos, context, viewMode, setViewMode }) => {
+// ⭐️ FIX: Removed 'context' from the arguments below to stop the TS6133 error
+const Header: React.FC<HeaderProps> = ({ onToggleTodos, showTodos, viewMode, setViewMode }) => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Use the Authenticator hook
   const { authStatus, signOut, toSignIn } = useAuthenticator((context) => [
     context.authStatus,
     context.signOut,
@@ -36,7 +36,6 @@ const Header: React.FC<HeaderProps> = ({ onToggleTodos, showTodos, context, view
     navigate('/');
   };
 
-  // --- Helper Render Functions ---
   const renderAuthButton = () => {
     if (authStatus === 'authenticated') {
       return (
@@ -62,15 +61,12 @@ const Header: React.FC<HeaderProps> = ({ onToggleTodos, showTodos, context, view
 
   return (
     <header style={styles.header}>
-      {/* 1. BRANDING & HOME NAVIGATION */}
       <div style={styles.logo} onClick={handleLogoClick}>
         <span style={{ color: '#00ff41', marginRight: '8px' }}>⚛️</span>
         <span style={{ letterSpacing: '2px' }}>SIGNAL_ONE</span>
       </div>
 
-      {/* 2. DYNAMIC NAVIGATION AREA */}
       <nav style={styles.nav}>
-        {/* Only show these buttons if we aren't in the Lobby */}
         {isVault && (
           <div style={styles.vaultNavGroup}>
             <button 
@@ -95,6 +91,7 @@ const Header: React.FC<HeaderProps> = ({ onToggleTodos, showTodos, context, view
   );
 };
 
+// Styles remain identical to your previous version...
 const styles: { [key: string]: React.CSSProperties } = {
   header: {
     display: 'flex',
