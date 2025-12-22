@@ -148,15 +148,72 @@ const CISSPApp: React.FC = () => {
           <SOCDashboard />
         ) : (
           <div style={{ display: 'flex', gap: '2rem', marginTop: '2rem', height: '80vh' }}>
-              <aside style={{ width: '300px', background: '#111', padding: '1rem', borderRadius: '12px', overflowY: 'auto', border: '1px solid #333' }}>
-                <h3 style={{ fontSize: '0.8rem', color: '#888', marginBottom: '1rem' }}>STUDY MODULES</h3>
-                {visuals.map((v) => (
-                  <div key={v.id} onClick={() => setSelectedVisual(v)} style={{ padding: '12px', marginBottom: '10px', borderRadius: '8px', cursor: 'pointer', borderLeft: `4px solid ${DOMAIN_COLORS[v.domain || 'RISK_MGMT']}`, background: selectedVisual?.id === v.id ? '#222' : 'transparent' }}>
-                    <div style={{ fontSize: '0.7rem', color: DOMAIN_COLORS[v.domain || 'RISK_MGMT'] }}>{v.domain ? CISSP_DOMAIN_MAP[v.domain].split(':')[0] : 'Domain X'}</div>
-                    <div style={{ fontWeight: 'bold' }}>{v.title}</div>
-                  </div>
-                ))}
-              </aside>
+              <aside style={{ 
+                width: '350px', 
+                background: '#0a0a0a', 
+                padding: '1.5rem', 
+                borderRadius: '12px', 
+                overflowY: 'auto', 
+                border: '1px solid #222',
+                boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
+            }}>
+                <h3 style={{ fontSize: '0.7rem', letterSpacing: '2px', color: '#444', marginBottom: '1.5rem', borderBottom: '1px solid #222', paddingBottom: '0.5rem' }}>
+                INTEL_VAULT // SECTORS
+                </h3>
+
+                {Object.entries(CISSP_DOMAIN_MAP).map(([domainKey, domainLabel]) => {
+                // Filter visuals for this specific domain
+                const domainModules = visuals.filter(v => v.domain === domainKey && v.title && v.s3Path);
+                
+                // If there are no modules in this domain yet, we can either hide it or show it as empty
+                if (domainModules.length === 0) return null;
+
+                return (
+                    <details key={domainKey} open style={{ marginBottom: '1rem', cursor: 'pointer' }}>
+                    <summary style={{ 
+                        listStyle: 'none', 
+                        padding: '10px', 
+                        background: '#111', 
+                        borderRadius: '4px', 
+                        borderLeft: `4px solid ${DOMAIN_COLORS[domainKey]}`,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        fontSize: '0.8rem',
+                        fontWeight: 'bold',
+                        color: '#eee'
+                    }}>
+                        <span>{domainLabel.split(':')[0]}</span>
+                        <span style={{ fontSize: '0.6rem', background: '#222', padding: '2px 6px', borderRadius: '10px', color: '#888' }}>
+                        {domainModules.length}
+                        </span>
+                    </summary>
+
+                    <div style={{ padding: '10px 0 10px 15px' }}>
+                        {domainModules.map((v) => (
+                        <div 
+                            key={v.id} 
+                            onClick={() => setSelectedVisual(v)} 
+                            style={{ 
+                            padding: '10px', 
+                            marginBottom: '5px', 
+                            borderRadius: '4px', 
+                            cursor: 'pointer',
+                            fontSize: '0.85rem',
+                            background: selectedVisual?.id === v.id ? 'rgba(0, 255, 65, 0.1)' : 'transparent',
+                            border: selectedVisual?.id === v.id ? '1px solid #00ff41' : '1px solid transparent',
+                            color: selectedVisual?.id === v.id ? '#00ff41' : '#aaa',
+                            transition: '0.2s'
+                            }}
+                        >
+                            {v.title}
+                        </div>
+                        ))}
+                    </div>
+                    </details>
+                );
+                })}
+            </aside>
 
               <main style={{ flex: 1, position: 'relative' }}>
                 {selectedVisual ? (
