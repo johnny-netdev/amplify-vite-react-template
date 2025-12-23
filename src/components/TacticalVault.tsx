@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 interface VaultProps {
   title: string;
@@ -9,9 +8,7 @@ interface VaultProps {
 }
 
 const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, accentColor = '#00ff41' }) => {
-  const navigate = useNavigate();
   const [expandedDomains, setExpandedDomains] = useState<string[]>([]);
-  // ⭐️ Added state to track which specific module/sector is currently active in the main view
   const [activeIntel, setActiveIntel] = useState<string | null>(null);
 
   const getNormalizedDomains = () => {
@@ -22,13 +19,12 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
   };
 
   const domains = getNormalizedDomains();
-  const allKeys = domains.map(([key]) => key);
 
   const toggleDomain = (domainKey: string) => {
     setExpandedDomains(prev => 
       prev.includes(domainKey) ? prev.filter(k => k !== domainKey) : [...prev, domainKey]
     );
-    setActiveIntel(domainKey); // Set this as the active context
+    setActiveIntel(domainKey); 
   };
 
   return (
@@ -38,7 +34,7 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
         <div style={styles.sidebarHeader}>
           <h3 style={{...styles.sidebarTitle, color: accentColor}}>{title}</h3>
           <div style={styles.controls}>
-            <button onClick={() => setExpandedDomains([])} style={styles.controlBtn}>[ COLLAPSE ]</button>
+            <button onClick={() => setExpandedDomains([])} style={styles.controlBtn}>[ COLLAPSE_ALL ]</button>
           </div>
         </div>
 
@@ -53,7 +49,7 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
                   <span style={{color: isExpanded ? sectorColor : '#444', marginRight: '10px'}}>
                     {isExpanded ? '▼' : '▶'}
                   </span>
-                  <span style={{color: isExpanded ? '#fff' : '#888', fontSize: '0.8rem'}}>
+                  <span style={{color: isExpanded ? '#fff' : '#888', fontSize: '0.8rem', fontFamily: 'monospace'}}>
                     {label.toUpperCase()}
                   </span>
                 </div>
@@ -74,9 +70,10 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
       <main style={styles.mainDisplay}>
         {activeIntel ? (
           <div style={styles.intelActive}>
-            <h2 style={{color: accentColor, letterSpacing: '2px'}}>INTEL_DECRYPTED // {activeIntel}</h2>
+            <h2 style={{color: accentColor, letterSpacing: '2px', fontFamily: 'monospace'}}>
+              INTEL_DECRYPTED // {activeIntel}
+            </h2>
             <div style={styles.loadingPulse}>[ STREAMING_TACTICAL_SCHEMA... ]</div>
-            {/* You can call <InteractiveVisual /> here once data is connected */}
           </div>
         ) : (
           <div style={styles.idleState}>
@@ -93,20 +90,19 @@ const styles = {
   vaultWrapper: { display: 'flex', gap: '20px', height: '80vh', marginTop: '20px' },
   sidebar: { width: '400px', background: 'rgba(10, 10, 10, 0.85)', border: '1px solid #222', borderRadius: '12px', display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
   sidebarHeader: { padding: '20px', borderBottom: '1px solid #222' },
-  sidebarTitle: { margin: 0, fontSize: '0.75rem', letterSpacing: '2px' },
+  sidebarTitle: { margin: 0, fontSize: '0.75rem', letterSpacing: '2px', fontFamily: 'monospace' },
   controls: { marginTop: '10px' },
-  controlBtn: { background: 'transparent', border: 'none', color: '#444', cursor: 'pointer', fontSize: '0.6rem', padding: 0 },
+  controlBtn: { background: 'transparent', border: 'none', color: '#444', cursor: 'pointer', fontSize: '0.6rem', padding: 0, fontFamily: 'monospace' },
   sectorList: { flex: 1, overflowY: 'auto' as const, padding: '10px' },
-  sectorWrapper: { border: '1px solid', marginBottom: '8px', background: '#0a0a0a' },
+  sectorWrapper: { border: '1px solid', marginBottom: '8px', background: '#0a0a0a', transition: 'all 0.3s ease' },
   sectorHeader: { padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center' },
-  miniIntel: { padding: '0 12px 12px 30px', fontSize: '0.65rem', color: '#444' },
+  miniIntel: { padding: '0 12px 12px 30px', fontSize: '0.65rem', color: '#444', fontFamily: 'monospace' },
   intelLine: { paddingLeft: '10px' },
-  
   mainDisplay: { flex: 1, background: 'rgba(0, 0, 0, 0.4)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' as const },
   idleState: { textAlign: 'center' as const },
-  glitchText: { color: '#333', letterSpacing: '5px', fontSize: '1.2rem', marginBottom: '10px' },
-  subText: { color: '#1a1a1a', fontSize: '0.7rem', letterSpacing: '2px' },
-  intelActive: { textAlign: 'center' as const, animation: 'fadeIn 0.5s ease-in' },
+  glitchText: { color: '#333', letterSpacing: '5px', fontSize: '1.2rem', marginBottom: '10px', fontFamily: 'monospace' },
+  subText: { color: '#1a1a1a', fontSize: '0.7rem', letterSpacing: '2px', fontFamily: 'monospace' },
+  intelActive: { textAlign: 'center' as const },
   loadingPulse: { color: '#666', fontSize: '0.8rem', marginTop: '20px', fontFamily: 'monospace' }
 };
 
