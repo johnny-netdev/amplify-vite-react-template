@@ -175,7 +175,7 @@ const KanbanBoard: React.FC = () => {
                     cursor: 'grab',
                     fontSize: '0.85rem',
                     opacity: draggedTaskId === task.id ? 0.4 : 1,
-                    transition: 'opacity 0.2s ease'
+                    transition: 'transform 0.1s ease, opacity 0.1s ease'
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
