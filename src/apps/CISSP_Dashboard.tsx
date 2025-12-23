@@ -103,7 +103,7 @@ const SOCDashboard: React.FC = () => {
 
       {/* --- RIGHT SIDE: ACTION TERMINAL (30%) --- */}
       <div style={styles.rightColumn}>
-        <div style={styles.terminalHeader}>CISSP_ACTION_TERMINAL</div>
+        <div style={styles.terminalHeader}>ACTION_TERMINAL</div>
         <div style={styles.terminalBody}>
           <button style={styles.testButton}>[ RUN_CAT_EXAM_SIM ]</button>
           <button style={styles.testButton}>[ DOMAIN_DRILL_OVERRIDE ]</button>
