@@ -3,7 +3,6 @@ import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
 import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
 
-const client = generateClient<Schema>();
 
 const DOMAIN_WEIGHTS: Record<string, number> = {
   RISK_MGMT: 0.15, ASSET_SEC: 0.10, SEC_ARCH_ENG: 0.13, COMM_NET_SEC: 0.13,
@@ -19,6 +18,8 @@ const SOCDashboard: React.FC = () => {
     });
     return () => sub.unsubscribe();
   }, []);
+  const client = generateClient<Schema>();
+
 
   // --- LIVE MATH ENGINE ---
   const stats = useMemo(() => {

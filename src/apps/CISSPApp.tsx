@@ -9,7 +9,6 @@ import { remove } from 'aws-amplify/storage';
 // ⭐️ Ensure this matches your specific dashboard file name
 import SOCDashboard from './CISSP_Dashboard';
 
-const client = generateClient<Schema>();
 
 // 1. Updated Interface to match the Dispatch type from App.tsx
 interface CISSPAppProps {
@@ -33,6 +32,8 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
     });
     return () => sub.unsubscribe();
   }, [selectedVisual]);
+  
+  const client = generateClient<Schema>();
 
   const handleUploadSuccess = async (event: { key?: string }) => {
     const path = event.key; 
