@@ -5,16 +5,9 @@ import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
 
 const client = generateClient<Schema>();
 
-// CISSP Official Weights (2024/2025)
 const DOMAIN_WEIGHTS: Record<string, number> = {
-  RISK_MGMT: 0.15,
-  ASSET_SEC: 0.10,
-  SEC_ARCH_ENG: 0.13,
-  COMM_NET_SEC: 0.13,
-  IAM: 0.13,
-  SEC_ASSESS: 0.12,
-  SEC_OPS: 0.13,
-  SOFT_DEV_SEC: 0.11
+  RISK_MGMT: 0.15, ASSET_SEC: 0.10, SEC_ARCH_ENG: 0.13, COMM_NET_SEC: 0.13,
+  IAM: 0.13, SEC_ASSESS: 0.12, SEC_OPS: 0.13, SOFT_DEV_SEC: 0.11
 };
 
 const SOCDashboard: React.FC = () => {
@@ -27,19 +20,14 @@ const SOCDashboard: React.FC = () => {
     return () => sub.unsubscribe();
   }, []);
 
-  // --- THE MATH ENGINE ---
+  // --- LIVE MATH ENGINE ---
   const stats = useMemo(() => {
     const domainScores: Record<string, number[]> = {};
     let totalDuration = 0;
-
-    // Initialize domains
     Object.keys(DOMAIN_WEIGHTS).forEach(d => domainScores[d] = []);
 
     activities.forEach(act => {
-      if (domainScores[act.domain]) {
-        domainScores[act.domain].push(act.score);
-      }
-      // Calculate fatigue (total duration in last 24h)
+      if (domainScores[act.domain]) domainScores[act.domain].push(act.score);
       const isRecent = new Date(act.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000);
       if (isRecent) totalDuration += act.duration;
     });
@@ -47,13 +35,9 @@ const SOCDashboard: React.FC = () => {
     let weightedReadiness = 0;
     const domainIntegrity = Object.keys(DOMAIN_WEIGHTS).map(domain => {
       const scores = domainScores[domain];
-      // EMA logic: average of last scores
       const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-      weightedReadiness += avg * (DOMAIN_WEIGHTS[domain] / 1.0); 
-      
-      // SAFE CHECK: Get the label or use a placeholder if the key is missing
-      const fullLabel = CISSP_DOMAIN_MAP[domain] || "Unknown: Sector Missing";
-      const shortLabel = fullLabel.split(':')[0];
+      weightedReadiness += avg * (DOMAIN_WEIGHTS[domain]); 
+      const shortLabel = (CISSP_DOMAIN_MAP[domain] || "Unknown").split(':')[0];
 
       return {
         id: domain,
@@ -70,60 +54,98 @@ const SOCDashboard: React.FC = () => {
     };
   }, [activities]);
 
-  const getDefcon = (score: number) => {
-    if (score > 80) return { level: 1, label: 'MISSION READY', color: '#fff' };
-    if (score > 60) return { level: 2, label: 'HIGH ALERT', color: '#f00' };
-    if (score > 40) return { level: 3, label: 'OPERATIONAL', color: '#ff0' };
-    return { level: 4, label: 'INITIAL TRAINING', color: '#00ff41' };
-  };
-
-  const defcon = getDefcon(stats.readiness);
-
   return (
-    <div style={{ background: '#050505', color: '#00ff41', padding: '2rem', borderRadius: '12px', border: '1px solid #111', fontFamily: 'monospace' }}>
-      
-      {/* ALPHA ZONE: STRATEGIC OVERVIEW */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '20px', marginBottom: '2rem' }}>
-        <div style={{ border: '1px solid #333', padding: '1.5rem', textAlign: 'center' }}>
-          <div style={{ fontSize: '0.8rem', color: '#888' }}>PROBABILITY OF EXAM SUCCESS</div>
-          <div style={{ fontSize: '4rem', fontWeight: 'bold', color: defcon.color }}>{stats.readiness}%</div>
-          <div style={{ fontSize: '1rem', letterSpacing: '3px' }}>DEFCON {defcon.level}: {defcon.label}</div>
-        </div>
+    <div style={styles.dashboardWrapper}>
+      {/* --- LEFT SIDE: STRATEGIC INTEL (70%) --- */}
+      <div style={styles.leftColumn}>
+        <header style={styles.header}>
+          <h2 style={styles.title}>STRATEGIC_INTEL // CISSP_SOC</h2>
+          <div style={styles.burnoutMonitor}>
+            <span style={styles.label}>OPERATOR_LOAD:</span>
+            <span style={{...styles.value, color: stats.fatigueMins > 120 ? '#ff4b2b' : '#00ff41'}}>
+              {stats.fatigueMins} MINS {stats.fatigueMins > 120 ? '[OVERLOAD]' : '[STABLE]'}
+            </span>
+          </div>
+        </header>
 
-        <div style={{ border: '1px solid #333', padding: '1.5rem' }}>
-          <div style={{ fontSize: '0.8rem', color: '#888' }}>COGNITIVE LOAD</div>
-          <div style={{ fontSize: '2rem', marginTop: '10px' }}>{stats.fatigueMins} <span style={{fontSize: '1rem'}}>MINS</span></div>
-          <div style={{ color: stats.fatigueMins > 120 ? '#f00' : '#888', fontSize: '0.7rem', marginTop: '10px' }}>
-            {stats.fatigueMins > 120 ? '!!! FATIGUE ALERT: DISCONTINUE OPS !!!' : 'STABLE'}
+        {/* Metric Row */}
+        <div style={styles.metricsRow}>
+          <div style={styles.metricCard}>
+            <div style={styles.metricLabel}>EXAM_PROBABILITY</div>
+            <div style={styles.metricValue}>{stats.readiness}%</div>
+            <div style={styles.progressBar}>
+              <div style={{...styles.progressFill, width: `${stats.readiness}%`}} />
+            </div>
+          </div>
+          <div style={styles.metricCard}>
+            <div style={styles.metricLabel}>ENGAGEMENT_LOGS</div>
+            <div style={styles.metricValue}>{activities.length}</div>
+            <div style={styles.footer}>Total Data Points Recorded</div>
           </div>
         </div>
 
-        <div style={{ border: '1px solid #333', padding: '1.5rem' }}>
-          <div style={{ fontSize: '0.8rem', color: '#888' }}>TOTAL ENGAGEMENTS</div>
-          <div style={{ fontSize: '2rem', marginTop: '10px' }}>{activities.length}</div>
-          <div style={{ fontSize: '0.7rem', color: '#888', marginTop: '10px' }}>LOG ENTRIES RECORDED</div>
+        {/* Domain Grid */}
+        <div style={styles.domainGrid}>
+          {stats.domains.map((d, i) => (
+            <div key={d.id} style={styles.domainCard}>
+              <div style={styles.domainInfo}>
+                <span style={styles.domainNum}>SECTOR_0{i+1}</span>
+                <span style={styles.domainName}>{d.label.toUpperCase()}</span>
+              </div>
+              <div style={{...styles.status, borderColor: DOMAIN_COLORS[d.id], color: DOMAIN_COLORS[d.id]}}>
+                {d.score}% {d.status}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* BRAVO ZONE: DOMAIN INTEGRITY GRID */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '15px' }}>
-        {stats.domains.map(d => (
-          <div key={d.id} style={{ background: '#111', padding: '15px', borderLeft: `4px solid ${DOMAIN_COLORS[d.id]}` }}>
-            <div style={{ fontSize: '0.7rem', color: '#888' }}>{d.label}</div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '5px' }}>
-              <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>{d.score}%</span>
-              <span style={{ fontSize: '0.6rem', color: d.status === 'OPTIMAL' ? '#00ff41' : d.status === 'DEGRADED' ? '#ff0' : '#f00' }}>
-                {d.status}
-              </span>
-            </div>
-            <div style={{ width: '100%', height: '4px', background: '#222', marginTop: '10px' }}>
-              <div style={{ width: `${d.score}%`, height: '100%', background: DOMAIN_COLORS[d.id] }} />
-            </div>
+      {/* --- RIGHT SIDE: ACTION TERMINAL (30%) --- */}
+      <div style={styles.rightColumn}>
+        <div style={styles.terminalHeader}>CISSP_ACTION_TERMINAL</div>
+        <div style={styles.terminalBody}>
+          <button style={styles.testButton}>[ RUN_CAT_EXAM_SIM ]</button>
+          <button style={styles.testButton}>[ DOMAIN_DRILL_OVERRIDE ]</button>
+          <button style={styles.testButton}>[ WEAK_POINT_SCAN ]</button>
+          <button style={styles.testButton}>[ BCP_DRP_SCENARIOS ]</button>
+          
+          <div style={styles.terminalFooter}>
+            SYSTEM_STATUS: ACTIVE<br />
+            AWAITING_CRITICAL_INPUT...
           </div>
-        ))}
+        </div>
       </div>
     </div>
   );
+};
+
+// Reusable SOC styles
+const styles = {
+  dashboardWrapper: { display: 'flex', gap: '20px', width: '100%', fontFamily: 'monospace' },
+  leftColumn: { flex: '0 0 70%', padding: '10px' },
+  rightColumn: { flex: '0 0 30%', padding: '10px', borderLeft: '1px solid #333', background: 'rgba(0, 255, 65, 0.02)' },
+  header: { display: 'flex', justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #333', paddingBottom: '10px' },
+  title: { color: '#00ff41', margin: 0, fontSize: '1.2rem' },
+  burnoutMonitor: { color: '#888', fontSize: '0.8rem' },
+  label: { marginRight: '5px' },
+  value: { color: '#00ff41', fontWeight: 'bold' as const },
+  metricsRow: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '30px' },
+  metricCard: { background: 'rgba(0, 255, 65, 0.05)', border: '1px solid #333', padding: '20px', borderRadius: '4px' },
+  metricLabel: { fontSize: '0.7rem', color: '#666', marginBottom: '10px' },
+  metricValue: { fontSize: '1.8rem', color: '#00ff41', fontWeight: 'bold' as const },
+  progressBar: { width: '100%', height: '4px', background: '#111', marginTop: '10px' },
+  progressFill: { height: '100%', background: '#00ff41' },
+  footer: { fontSize: '0.6rem', color: '#444', marginTop: '10px' },
+  domainGrid: { display: 'grid', gridTemplateColumns: '1fr', gap: '10px' },
+  domainCard: { border: '1px solid #222', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.3)' },
+  domainInfo: { display: 'flex', flexDirection: 'column' as const },
+  domainNum: { fontSize: '0.6rem', color: '#444' },
+  domainName: { fontSize: '0.85rem', color: '#aaa', letterSpacing: '1px' },
+  status: { fontSize: '0.7rem', border: '1px solid', padding: '4px 10px' },
+  terminalHeader: { color: '#666', fontSize: '0.7rem', letterSpacing: '2px', marginBottom: '20px' },
+  terminalBody: { display: 'flex', flexDirection: 'column' as const, gap: '15px' },
+  testButton: { background: 'transparent', color: '#00ff41', border: '1px solid #00ff41', padding: '15px', textAlign: 'left' as const, cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'monospace' },
+  terminalFooter: { marginTop: '30px', color: '#222', fontSize: '0.7rem' }
 };
 
 export default SOCDashboard;
