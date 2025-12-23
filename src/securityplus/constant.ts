@@ -16,3 +16,10 @@ export const SEC_PLUS_COLORS: Record<string, string> = {
   '4': '#f0db4f',
   '5': '#a020f0',
 };
+
+export const SEC_PLUS_TERMINAL = {
+  buttonBorder: '#00ff41',
+  buttonText: '#00ff41',
+  buttonHoverBg: 'rgba(0, 255, 65, 0.1)',
+  accent: '#00ff41'
+};

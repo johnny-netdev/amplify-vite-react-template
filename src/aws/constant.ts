@@ -14,3 +14,10 @@ export const AWS_COLORS: Record<string, string> = {
   'SAP_D3': '#357ae8',
   'SAP_D4': '#ff4b2b',
 };
+
+export const AWS_TERMINAL = {
+  buttonBorder: '#ff9900', // AWS Orange
+  buttonText: '#ff9900',
+  buttonHoverBg: 'rgba(255, 153, 0, 0.1)',
+  accent: '#ff9900'
+};

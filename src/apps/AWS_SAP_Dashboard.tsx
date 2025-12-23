@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useVaultEngine, DomainData } from '../utils/vaultEngine';
-import { AWS_SAP_RAW_DATA, AWS_COLORS } from '../aws/constant';
+import { AWS_SAP_RAW_DATA, AWS_COLORS, AWS_TERMINAL } from '../aws/constant';
 
 const AWSSAPDashboard: React.FC = () => {
   // ⭐️ FIXED: Added missing startTime for the fatigue engine
@@ -77,22 +77,46 @@ const AWSSAPDashboard: React.FC = () => {
         <div style={styles.terminalBody}>
           <button 
             style={styles.testButton}
-            onMouseOver={(e) => (e.currentTarget.style.borderColor = '#00ff41')}
-            onMouseOut={(e) => (e.currentTarget.style.borderColor = '#1a1a1a')}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = AWS_TERMINAL.buttonBorder;
+              e.currentTarget.style.backgroundColor = AWS_TERMINAL.buttonHoverBg;
+              e.currentTarget.style.color = AWS_TERMINAL.buttonText;
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#1a1a1a';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#00ff41';
+            }}
           >
             [ RUN_SAP_PRACTICE_EXAM ]
           </button>
           <button 
             style={styles.testButton}
-            onMouseOver={(e) => (e.currentTarget.style.borderColor = '#00ff41')}
-            onMouseOut={(e) => (e.currentTarget.style.borderColor = '#1a1a1a')}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = AWS_TERMINAL.buttonBorder;
+              e.currentTarget.style.backgroundColor = AWS_TERMINAL.buttonHoverBg;
+              e.currentTarget.style.color = AWS_TERMINAL.buttonText;
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#1a1a1a';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#00ff41';
+            }}
           >
             [ ARCHITECTURE_SCENARIO_DRILL ]
           </button>
           <button 
             style={styles.testButton}
-            onMouseOver={(e) => (e.currentTarget.style.borderColor = '#00ff41')}
-            onMouseOut={(e) => (e.currentTarget.style.borderColor = '#1a1a1a')}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = AWS_TERMINAL.buttonBorder;
+              e.currentTarget.style.backgroundColor = AWS_TERMINAL.buttonHoverBg;
+              e.currentTarget.style.color = AWS_TERMINAL.buttonText;
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#1a1a1a';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#00ff41';
+            }}
           >
             [ WHITE_PAPER_RECALL ]
           </button>

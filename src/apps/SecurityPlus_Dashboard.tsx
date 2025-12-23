@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useVaultEngine } from '../utils/vaultEngine';
-import { SEC_PLUS_RAW_DATA, SEC_PLUS_COLORS } from '../securityplus/constant';
+import { SEC_PLUS_RAW_DATA, SEC_PLUS_COLORS, SEC_PLUS_TERMINAL } from '../securityplus/constant';
 
 const SecPlusDashboard: React.FC = () => {
   const [startTime] = useState(Date.now());
@@ -69,29 +69,61 @@ const SecPlusDashboard: React.FC = () => {
         <div style={styles.terminalBody}>
           <button 
             style={styles.testButton}
-            onMouseOver={(e) => (e.currentTarget.style.borderColor = '#00ff41')}
-            onMouseOut={(e) => (e.currentTarget.style.borderColor = '#1a1a1a')}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = SEC_PLUS_TERMINAL.buttonBorder;
+              e.currentTarget.style.backgroundColor = SEC_PLUS_TERMINAL.buttonHoverBg;
+              e.currentTarget.style.color = SEC_PLUS_TERMINAL.buttonText;
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#1a1a1a';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#00ff41';
+            }}
           >
             [ START_PRACTICE_EXAM ]
           </button>
           <button 
             style={styles.testButton}
-            onMouseOver={(e) => (e.currentTarget.style.borderColor = '#00ff41')}
-            onMouseOut={(e) => (e.currentTarget.style.borderColor = '#1a1a1a')}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = SEC_PLUS_TERMINAL.buttonBorder;
+              e.currentTarget.style.backgroundColor = SEC_PLUS_TERMINAL.buttonHoverBg;
+              e.currentTarget.style.color = SEC_PLUS_TERMINAL.buttonText;
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#1a1a1a';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#00ff41';
+            }}
           >
             [ TIMED_DRILL_MODE ]
           </button>
           <button 
             style={styles.testButton}
-            onMouseOver={(e) => (e.currentTarget.style.borderColor = '#00ff41')}
-            onMouseOut={(e) => (e.currentTarget.style.borderColor = '#1a1a1a')}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = SEC_PLUS_TERMINAL.buttonBorder;
+              e.currentTarget.style.backgroundColor = SEC_PLUS_TERMINAL.buttonHoverBg;
+              e.currentTarget.style.color = SEC_PLUS_TERMINAL.buttonText;
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#1a1a1a';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#00ff41';
+            }}
           >
             [ DOMAIN_STRESS_TEST ]
           </button>
           <button 
             style={styles.testButton}
-            onMouseOver={(e) => (e.currentTarget.style.borderColor = '#00ff41')}
-            onMouseOut={(e) => (e.currentTarget.style.borderColor = '#1a1a1a')}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = SEC_PLUS_TERMINAL.buttonBorder;
+              e.currentTarget.style.backgroundColor = SEC_PLUS_TERMINAL.buttonHoverBg;
+              e.currentTarget.style.color = SEC_PLUS_TERMINAL.buttonText;
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#1a1a1a';
+              e.currentTarget.style.backgroundColor = 'transparent';
+              e.currentTarget.style.color = '#00ff41';
+            }}
           >
             [ FLASHCARD_RECALL ]
           </button>
