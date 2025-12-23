@@ -1,29 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { generateClient } from 'aws-amplify/data';
+import { getUrl } from 'aws-amplify/storage';
+import type { Schema } from '../../amplify/data/resource';
+
+const client = generateClient<Schema>();
 
 interface VaultProps {
   title: string;
   domainMap: Record<string, string> | any[]; 
   domainColors: Record<string, string>;
   accentColor?: string;
+  // Dynamic Hooks for different Certifications
+  model: 'CisspVisual' | 'AwsVisual' | 'SecPlusVisual';
 }
 
-const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, accentColor = '#00ff41' }) => {
+const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, accentColor = '#00ff41', model }) => {
   const [expandedDomains, setExpandedDomains] = useState<string[]>([]);
   const [activeIntel, setActiveIntel] = useState<string | null>(null);
+  const [visuals, setVisuals] = useState<any[]>([]);
+  const [activeUrl, setActiveUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  const getNormalizedDomains = () => {
-    if (Array.isArray(domainMap)) {
-      return domainMap.map(d => [d.id || d.key || d.domain, d.name || d.label || d.title || "Unknown Sector"]);
+  // 1. Fetch Records from the correct table when sector changes
+  useEffect(() => {
+    if (activeIntel) {
+      const fetchVisuals = async () => {
+        setLoading(true);
+        try {
+          // Dynamically access the model table based on the 'model' prop
+          const { data } = await (client.models[model] as any).list({
+            filter: { domain: { eq: activeIntel } }
+          });
+          setVisuals(data);
+          setActiveUrl(null); // Reset view when switching sectors
+        } catch (err) {
+          console.error("Vault retrieval error:", err);
+        } finally {
+          setLoading(false);
+        }
+      };
+      fetchVisuals();
     }
-    return Object.entries(domainMap);
+  }, [activeIntel, model]);
+
+  // 2. Generate secure S3 URL for the specific HTML file
+  const loadModule = async (path: string) => {
+    try {
+      const result = await getUrl({ path });
+      setActiveUrl(result.url.toString());
+    } catch (err) {
+      console.error("S3 Link Generation Error:", err);
+    }
   };
 
-  const domains = getNormalizedDomains();
+  const domains = Array.isArray(domainMap) ? domainMap : Object.entries(domainMap);
 
-  const toggleDomain = (domainKey: string) => {
-    setExpandedDomains(prev => 
-      prev.includes(domainKey) ? prev.filter(k => k !== domainKey) : [...prev, domainKey]
-    );
+  const selectSector = (domainKey: string) => {
+    setExpandedDomains([domainKey]); // Focus on one at a time for tactical clarity
     setActiveIntel(domainKey); 
   };
 
@@ -33,31 +66,37 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
       <aside style={styles.sidebar}>
         <div style={styles.sidebarHeader}>
           <h3 style={{...styles.sidebarTitle, color: accentColor}}>{title}</h3>
-          <div style={styles.controls}>
-            <button onClick={() => setExpandedDomains([])} style={styles.controlBtn}>[ COLLAPSE_ALL ]</button>
-          </div>
         </div>
 
         <div style={styles.sectorList}>
-          {domains.map(([key, label]) => {
+          {domains.map((d: any) => {
+            const key = d.id || d[0];
+            const label = d.name || d[1];
             const isExpanded = expandedDomains.includes(key);
             const sectorColor = domainColors[key] || accentColor;
 
             return (
               <div key={key} style={{...styles.sectorWrapper, borderColor: isExpanded ? sectorColor : '#1a1a1a'}}>
-                <div onClick={() => toggleDomain(key)} style={styles.sectorHeader}>
-                  <span style={{color: isExpanded ? sectorColor : '#444', marginRight: '10px'}}>
-                    {isExpanded ? '▼' : '▶'}
-                  </span>
-                  <span style={{color: isExpanded ? '#fff' : '#888', fontSize: '0.8rem', fontFamily: 'monospace'}}>
+                <div onClick={() => selectSector(key)} style={styles.sectorHeader}>
+                  <span style={{color: isExpanded ? sectorColor : '#444', marginRight: '10px'}}>{isExpanded ? '▼' : '▶'}</span>
+                  <span style={{color: isExpanded ? '#fff' : '#888', fontSize: '0.75rem', fontFamily: 'monospace'}}>
                     {label.toUpperCase()}
                   </span>
                 </div>
+                
                 {isExpanded && (
-                   <div style={styles.miniIntel}>
-                      <div style={{...styles.intelLine, borderLeft: `2px solid ${sectorColor}`}}>
-                        SECURE_DATA_NODE_CONNECTED
-                      </div>
+                   <div style={styles.intelTray}>
+                      {loading ? (
+                        <div style={styles.statusText}>QUERYING_DATABASE...</div>
+                      ) : visuals.length > 0 ? (
+                        visuals.map((v) => (
+                          <div key={v.id} onClick={() => loadModule(v.s3Path)} style={styles.intelItem}>
+                            {"> "} {v.title.toUpperCase()}
+                          </div>
+                        ))
+                      ) : (
+                        <div style={styles.statusText}>NO_INTEL_RECORDS_FOUND</div>
+                      )}
                    </div>
                 )}
               </div>
@@ -66,19 +105,14 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
         </div>
       </aside>
 
-      {/* --- MAIN CONTENT AREA --- */}
+      {/* --- MAIN CONTENT AREA: DISPLAY --- */}
       <main style={styles.mainDisplay}>
-        {activeIntel ? (
-          <div style={styles.intelActive}>
-            <h2 style={{color: accentColor, letterSpacing: '2px', fontFamily: 'monospace'}}>
-              INTEL_DECRYPTED // {activeIntel}
-            </h2>
-            <div style={styles.loadingPulse}>[ STREAMING_TACTICAL_SCHEMA... ]</div>
-          </div>
+        {activeUrl ? (
+          <iframe src={activeUrl} style={styles.iframe} title="Tactical Visual" />
         ) : (
           <div style={styles.idleState}>
-             <div style={styles.glitchText}>AWAITING_DATA_SELECTION...</div>
-             <div style={styles.subText}>SYSTEM_IDLE // SELECT_SECTOR_FOR_ANALYSIS</div>
+             <div style={styles.glitchText}>{loading ? 'DECRYPTING...' : 'AWAITING_DATA_SELECTION...'}</div>
+             <div style={styles.subText}>SYSTEM_IDLE // SELECT_MODULE_FROM_SIDEBAR</div>
           </div>
         )}
       </main>
@@ -87,23 +121,21 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
 };
 
 const styles = {
-  vaultWrapper: { display: 'flex', gap: '20px', height: '80vh', marginTop: '20px' },
-  sidebar: { width: '400px', background: 'rgba(10, 10, 10, 0.85)', border: '1px solid #222', borderRadius: '12px', display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
-  sidebarHeader: { padding: '20px', borderBottom: '1px solid #222' },
-  sidebarTitle: { margin: 0, fontSize: '0.75rem', letterSpacing: '2px', fontFamily: 'monospace' },
-  controls: { marginTop: '10px' },
-  controlBtn: { background: 'transparent', border: 'none', color: '#444', cursor: 'pointer', fontSize: '0.6rem', padding: 0, fontFamily: 'monospace' },
+  vaultWrapper: { display: 'flex', gap: '20px', height: '82vh', marginTop: '10px' },
+  sidebar: { width: '380px', background: 'rgba(5, 5, 5, 0.9)', border: '1px solid #222', borderRadius: '8px', display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
+  sidebarHeader: { padding: '15px', borderBottom: '1px solid #222', background: 'rgba(255,255,255,0.02)' },
+  sidebarTitle: { margin: 0, fontSize: '0.7rem', letterSpacing: '2px', fontFamily: 'monospace' },
   sectorList: { flex: 1, overflowY: 'auto' as const, padding: '10px' },
-  sectorWrapper: { border: '1px solid', marginBottom: '8px', background: '#0a0a0a', transition: 'all 0.3s ease' },
+  sectorWrapper: { borderLeft: '3px solid', marginBottom: '4px', background: '#0a0a0a' },
   sectorHeader: { padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center' },
-  miniIntel: { padding: '0 12px 12px 30px', fontSize: '0.65rem', color: '#444', fontFamily: 'monospace' },
-  intelLine: { paddingLeft: '10px' },
-  mainDisplay: { flex: 1, background: 'rgba(0, 0, 0, 0.4)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' as const },
-  idleState: { textAlign: 'center' as const },
-  glitchText: { color: '#333', letterSpacing: '5px', fontSize: '1.2rem', marginBottom: '10px', fontFamily: 'monospace' },
-  subText: { color: '#1a1a1a', fontSize: '0.7rem', letterSpacing: '2px', fontFamily: 'monospace' },
-  intelActive: { textAlign: 'center' as const },
-  loadingPulse: { color: '#666', fontSize: '0.8rem', marginTop: '20px', fontFamily: 'monospace' }
+  intelTray: { padding: '0 12px 12px 30px', background: 'rgba(0,0,0,0.3)' },
+  intelItem: { color: '#00ff41', fontSize: '0.65rem', padding: '6px 0', cursor: 'pointer', fontFamily: 'monospace', opacity: 0.8, ':hover': { opacity: 1 } },
+  statusText: { color: '#444', fontSize: '0.6rem', fontFamily: 'monospace', fontStyle: 'italic' },
+  mainDisplay: { flex: 1, background: '#000', borderRadius: '8px', border: '1px solid #222', overflow: 'hidden', position: 'relative' as const },
+  iframe: { width: '100%', height: '100%', border: 'none', background: '#fff' },
+  idleState: { height: '100%', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center' },
+  glitchText: { color: '#222', letterSpacing: '5px', fontSize: '1.2rem', marginBottom: '10px', fontFamily: 'monospace' },
+  subText: { color: '#111', fontSize: '0.7rem', letterSpacing: '2px', fontFamily: 'monospace' },
 };
 
 export default TacticalVault;

@@ -9,6 +9,7 @@ const AWSSAPVaultPage: React.FC = () => {
       domainMap={AWS_SAP_RAW_DATA}
       domainColors={AWS_COLORS}
       accentColor="#ff9900" // AWS Orange accent
+      model="AwsVisual" // Dynamic model for AWS
     />
   );
 };

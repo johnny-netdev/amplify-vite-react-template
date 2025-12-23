@@ -8,7 +8,8 @@ const CISSPVault = () => {
       title="INTEL_VAULT // CISSP_SECTORS"
       domainMap={CISSP_DOMAIN_MAP}
       domainColors={DOMAIN_COLORS}
-      accentColor="#234de5ff" 
+      accentColor="#234de5ff"
+      model="CisspVisual" // Dynamic model for CISSP
     />
   );
 };

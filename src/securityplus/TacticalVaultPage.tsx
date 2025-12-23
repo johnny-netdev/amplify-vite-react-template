@@ -9,6 +9,7 @@ const SecurityPlusVaultPage: React.FC = () => {
       domainMap={SEC_PLUS_RAW_DATA}
       domainColors={SEC_PLUS_COLORS}
       accentColor="#00ff41" // Classic Terminal Green
+      model="SecPlusVisual" // Dynamic model for Security+
     />
   );
 };
