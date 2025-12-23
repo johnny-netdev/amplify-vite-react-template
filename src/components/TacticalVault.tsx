@@ -10,109 +10,111 @@ interface VaultProps {
   domainMap: Record<string, string> | any[]; 
   domainColors: Record<string, string>;
   accentColor?: string;
-  // Dynamic Hooks for different Certifications
   model: 'CisspVisual' | 'AwsVisual' | 'SecPlusVisual';
 }
 
 const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, accentColor = '#00ff41', model }) => {
-  const [expandedDomains, setExpandedDomains] = useState<string[]>([]);
-  const [activeIntel, setActiveIntel] = useState<string | null>(null);
   const [visuals, setVisuals] = useState<any[]>([]);
+  const [selectedVisual, setSelectedVisual] = useState<any | null>(null);
   const [activeUrl, setActiveUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
-  // 1. Fetch Records from the correct table when sector changes
+  // ⭐️ Safe Live Observer
   useEffect(() => {
-    if (activeIntel) {
-      const fetchVisuals = async () => {
-        setLoading(true);
-        try {
-          // Dynamically access the model table based on the 'model' prop
-          const { data } = await (client.models[model] as any).list({
-            filter: { domain: { eq: activeIntel } }
-          });
-          setVisuals(data);
-          setActiveUrl(null); // Reset view when switching sectors
-        } catch (err) {
-          console.error("Vault retrieval error:", err);
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchVisuals();
-    }
-  }, [activeIntel, model]);
+    // Dynamically access the model with a safety check
+    const targetModel = (client.models as any)[model];
 
-  // 2. Generate secure S3 URL for the specific HTML file
-  const loadModule = async (path: string) => {
-    try {
-      const result = await getUrl({ path });
-      setActiveUrl(result.url.toString());
-    } catch (err) {
-      console.error("S3 Link Generation Error:", err);
+    if (!targetModel) {
+      console.warn(`Target model "${model}" is not yet available on the client.`);
+      return;
     }
+
+    const sub = targetModel.observeQuery().subscribe({
+      next: ({ items }: { items: any[] }) => setVisuals([...items]),
+      error: (err: any) => console.error("Subscription error:", err)
+    });
+
+    return () => sub.unsubscribe();
+  }, [model]);
+
+  // Handle S3 URL Generation
+  useEffect(() => {
+    if (selectedVisual?.s3Path) {
+      getUrl({ path: selectedVisual.s3Path })
+        .then(res => setActiveUrl(res.url.toString()))
+        .catch(err => console.error("S3 Link Error:", err));
+    } else {
+      setActiveUrl(null);
+    }
+  }, [selectedVisual]);
+
+  // ⭐️ Normalized Domains Safety Check
+  const getNormalizedDomains = (): [string, string][] => {
+    if (!domainMap) return [];
+    if (Array.isArray(domainMap)) {
+      return domainMap.map(d => [
+        String(d.id || d.key || ""), 
+        String(d.name || d.label || "Unknown Sector")
+      ]);
+    }
+    return Object.entries(domainMap);
   };
 
-  const domains = Array.isArray(domainMap) ? domainMap : Object.entries(domainMap);
-
-  const selectSector = (domainKey: string) => {
-    setExpandedDomains([domainKey]); // Focus on one at a time for tactical clarity
-    setActiveIntel(domainKey); 
-  };
+  const domains = getNormalizedDomains();
 
   return (
-    <div style={styles.vaultWrapper}>
-      {/* --- LEFT SIDEBAR: SECTORS --- */}
-      <aside style={styles.sidebar}>
-        <div style={styles.sidebarHeader}>
-          <h3 style={{...styles.sidebarTitle, color: accentColor}}>{title}</h3>
-        </div>
+    <div style={s.layout}>
+      {/* SIDEBAR: GLASSMORPHISM STYLE */}
+      <aside style={s.sidebar}>
+        <h3 style={s.sidebarHeader}>{title}</h3>
+        {domains.map(([key, label]) => {
+          const domainModules = visuals.filter(v => v.domain === key);
+          if (domainModules.length === 0) return null;
 
-        <div style={styles.sectorList}>
-          {domains.map((d: any) => {
-            const key = d.id || d[0];
-            const label = d.name || d[1];
-            const isExpanded = expandedDomains.includes(key);
-            const sectorColor = domainColors[key] || accentColor;
-
-            return (
-              <div key={key} style={{...styles.sectorWrapper, borderColor: isExpanded ? sectorColor : '#1a1a1a'}}>
-                <div onClick={() => selectSector(key)} style={styles.sectorHeader}>
-                  <span style={{color: isExpanded ? sectorColor : '#444', marginRight: '10px'}}>{isExpanded ? '▼' : '▶'}</span>
-                  <span style={{color: isExpanded ? '#fff' : '#888', fontSize: '0.75rem', fontFamily: 'monospace'}}>
-                    {label.toUpperCase()}
-                  </span>
-                </div>
-                
-                {isExpanded && (
-                   <div style={styles.intelTray}>
-                      {loading ? (
-                        <div style={styles.statusText}>QUERYING_DATABASE...</div>
-                      ) : visuals.length > 0 ? (
-                        visuals.map((v) => (
-                          <div key={v.id} onClick={() => loadModule(v.s3Path)} style={styles.intelItem}>
-                            {"> "} {v.title.toUpperCase()}
-                          </div>
-                        ))
-                      ) : (
-                        <div style={styles.statusText}>NO_INTEL_RECORDS_FOUND</div>
-                      )}
-                   </div>
-                )}
+          return (
+            <details key={key} open={selectedVisual?.domain === key} style={s.details}>
+              <summary style={{...s.summary, borderLeft: `4px solid ${domainColors[key] || accentColor}`}}>
+                <span style={{ fontFamily: 'monospace' }}>{label.split(':')[0]}</span>
+                <span style={s.badge}>{domainModules.length}</span>
+              </summary>
+              <div style={s.itemContainer}>
+                {domainModules.map(v => (
+                  <div 
+                    key={v.id} 
+                    onClick={() => setSelectedVisual(v)}
+                    style={{
+                      ...s.intelItem,
+                      background: selectedVisual?.id === v.id ? `${accentColor}33` : 'transparent',
+                      border: selectedVisual?.id === v.id ? `1px solid ${accentColor}` : '1px solid transparent',
+                      color: selectedVisual?.id === v.id ? accentColor : '#aaa'
+                    }}
+                  >
+                    {v.title}
+                  </div>
+                ))}
               </div>
-            );
-          })}
-        </div>
+            </details>
+          );
+        })}
       </aside>
 
-      {/* --- MAIN CONTENT AREA: DISPLAY --- */}
-      <main style={styles.mainDisplay}>
+      {/* MAIN VIEWPORT */}
+      <main style={s.main}>
         {activeUrl ? (
-          <iframe src={activeUrl} style={styles.iframe} title="Tactical Visual" />
+          <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <div style={s.intelHeader}>
+              <div>
+                <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem' }}>{selectedVisual?.title}</h2>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: '#666' }}>{selectedVisual?.description || 'No description provided.'}</p>
+              </div>
+              <span style={{ ...s.domainTag, background: domainColors[selectedVisual?.domain] || accentColor }}>
+                {selectedVisual?.domain}
+              </span>
+            </div>
+            <iframe src={activeUrl} style={s.iframe} title="Intel Display" />
+          </div>
         ) : (
-          <div style={styles.idleState}>
-             <div style={styles.glitchText}>{loading ? 'DECRYPTING...' : 'AWAITING_DATA_SELECTION...'}</div>
-             <div style={styles.subText}>SYSTEM_IDLE // SELECT_MODULE_FROM_SIDEBAR</div>
+          <div style={s.idle}>
+            <div style={s.idlePulse}>AWAITING_INTEL_SELECTION...</div>
           </div>
         )}
       </main>
@@ -120,22 +122,25 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
   );
 };
 
-const styles = {
-  vaultWrapper: { display: 'flex', gap: '20px', height: '82vh', marginTop: '10px' },
-  sidebar: { width: '380px', background: 'rgba(5, 5, 5, 0.9)', border: '1px solid #222', borderRadius: '8px', display: 'flex', flexDirection: 'column' as const, overflow: 'hidden' },
-  sidebarHeader: { padding: '15px', borderBottom: '1px solid #222', background: 'rgba(255,255,255,0.02)' },
-  sidebarTitle: { margin: 0, fontSize: '0.7rem', letterSpacing: '2px', fontFamily: 'monospace' },
-  sectorList: { flex: 1, overflowY: 'auto' as const, padding: '10px' },
-  sectorWrapper: { borderLeft: '3px solid', marginBottom: '4px', background: '#0a0a0a' },
-  sectorHeader: { padding: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center' },
-  intelTray: { padding: '0 12px 12px 30px', background: 'rgba(0,0,0,0.3)' },
-  intelItem: { color: '#00ff41', fontSize: '0.65rem', padding: '6px 0', cursor: 'pointer', fontFamily: 'monospace', opacity: 0.8, ':hover': { opacity: 1 } },
-  statusText: { color: '#444', fontSize: '0.6rem', fontFamily: 'monospace', fontStyle: 'italic' },
-  mainDisplay: { flex: 1, background: '#000', borderRadius: '8px', border: '1px solid #222', overflow: 'hidden', position: 'relative' as const },
-  iframe: { width: '100%', height: '100%', border: 'none', background: '#fff' },
-  idleState: { height: '100%', display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center' },
-  glitchText: { color: '#222', letterSpacing: '5px', fontSize: '1.2rem', marginBottom: '10px', fontFamily: 'monospace' },
-  subText: { color: '#111', fontSize: '0.7rem', letterSpacing: '2px', fontFamily: 'monospace' },
+const s = {
+  layout: { display: 'flex', gap: '2rem', height: '80vh', marginTop: '1rem', width: '100%' },
+  sidebar: { 
+    width: '380px', background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(12px)',
+    WebkitBackdropFilter: 'blur(12px)', padding: '1.5rem', borderRadius: '12px', 
+    overflowY: 'auto' as const, border: '1px solid rgba(255, 255, 255, 0.1)', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
+  },
+  sidebarHeader: { fontSize: '0.7rem', letterSpacing: '2px', color: '#666', marginBottom: '1.5rem', borderBottom: '1px solid #333', paddingBottom: '0.5rem', fontFamily: 'monospace' },
+  details: { marginBottom: '0.8rem', cursor: 'pointer' },
+  summary: { listStyle: 'none', padding: '12px', background: 'rgba(34, 34, 34, 0.4)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#eee', transition: '0.2s' },
+  badge: { fontSize: '0.6rem', background: '#000', padding: '2px 8px', borderRadius: '10px', color: '#00ff41', border: '1px solid #222' },
+  itemContainer: { padding: '8px 0 8px 12px' },
+  intelItem: { padding: '12px', marginBottom: '4px', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'monospace', transition: 'all 0.2s ease' },
+  main: { flex: 1, background: 'rgba(0, 0, 0, 0.4)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', borderRadius: '12px', padding: '1.5rem', border: '1px solid rgba(255, 255, 255, 0.1)', position: 'relative' as const, overflow: 'hidden' },
+  intelHeader: { marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
+  domainTag: { color: 'black', padding: '4px 14px', borderRadius: '20px', fontSize: '0.65rem', fontWeight: 'bold', textTransform: 'uppercase' as const },
+  iframe: { flex: 1, width: '100%', border: 'none', borderRadius: '8px', background: '#fff', boxShadow: '0 0 40px rgba(0,0,0,0.5)' },
+  idle: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#333', letterSpacing: '4px', fontFamily: 'monospace' },
+  idlePulse: { animation: 'pulse 2s infinite' }
 };
 
 export default TacticalVault;
