@@ -15,6 +15,8 @@ const client = generateClient<Schema>();
 interface VaultAppProps {
   viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
   setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
+  preLoadedDrillId?: string | null;
+  onDrillStarted?: () => void;
 }
 
 const SecurityPlusApp: React.FC<VaultAppProps> = ({ viewMode }) => {

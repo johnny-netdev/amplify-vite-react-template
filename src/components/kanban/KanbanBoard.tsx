@@ -4,6 +4,11 @@ import type { Schema } from '../../../amplify/data/resource';
 
 const client = generateClient<Schema>();
 
+// 🟢 STEP 1: Define the Interface to accept the function from App.tsx
+interface KanbanBoardProps {
+  onLaunchDrill: (drillId: string, certPath?: string) => void;
+}
+
 const lanes = [
   { key: 'TODO', label: 'TODO' },
   { key: 'IN_PROGRESS', label: 'In-progress' },
@@ -11,7 +16,8 @@ const lanes = [
   { key: 'COMPLETED', label: 'Complete' },
 ];
 
-const KanbanBoard: React.FC = () => {
+// 🟢 STEP 2: Pass the props into the component
+const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
   const [tasks, setTasks] = useState<Array<Schema['Task']['type']>>([]);
   const [newTask, setNewTask] = useState('');
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
@@ -74,12 +80,11 @@ const KanbanBoard: React.FC = () => {
     }
   };
 
-  // --- REINFORCEMENT LOGIC ---
+  // 🟢 STEP 3: Replace alert with the actual function from App.tsx
   const handleLaunchRemediation = (drillId: string | null | undefined) => {
     if (!drillId) return;
-    // For now, we alert. In the next step, we'll use this to navigate to ActionTerminal
-    alert(`REDIRECTING_TO_TERMINAL: Loading Protocol ${drillId}`);
-    // window.location.hash = '/terminal'; // Example if using hash routing
+    // This sends the signal back to App.tsx to switch views and load the drill
+    onLaunchDrill(drillId); 
   };
 
   return (

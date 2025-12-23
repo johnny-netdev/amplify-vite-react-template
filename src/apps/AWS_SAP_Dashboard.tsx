@@ -5,7 +5,7 @@ import ActionTerminal from '../components/terminal/ActionTerminal';
 
 // AWS THEME CONSTANTS
 const AWS_ORANGE = '#FF9900';
-const AWS_DEEP_SQUID = '#232F3E';
+// const AWS_DEEP_SQUID = '#232F3E';
 
 interface AWSSAPDashboardProps {
   preLoadedDrillId?: string | null;
