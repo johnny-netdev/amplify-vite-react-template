@@ -1,104 +1,187 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '../../amplify/data/resource';
 
-const initialTasks = [
-  { id: 1, content: 'Example Task 1', status: 'TODO' },
-  { id: 2, content: 'Example Task 2', status: 'In-progress' },
-  { id: 3, content: 'Example Task 3', status: 'Blocked' },
-  { id: 4, content: 'Example Task 4', status: 'Complete' },
-];
+const client = generateClient<Schema>();
 
 const lanes = [
   { key: 'TODO', label: 'TODO' },
-  { key: 'In-progress', label: 'In-progress' },
-  { key: 'Blocked', label: 'Blocked' },
-  { key: 'Complete', label: 'Complete' },
-  { key: 'Done', label: 'Done 🗑️' },
+  { key: 'IN_PROGRESS', label: 'In-progress' },
+  { key: 'BLOCKED', label: 'Blocked' },
+  { key: 'COMPLETED', label: 'Complete' },
 ];
 
 const KanbanBoard: React.FC = () => {
-  const [tasks, setTasks] = useState(initialTasks);
+  const [tasks, setTasks] = useState<Array<Schema['Task']['type']>>([]);
   const [newTask, setNewTask] = useState('');
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
 
-  // Drag state
-  const [draggedTaskId, setDraggedTaskId] = useState<number | null>(null);
+  // 1. Subscribe to Real-time Data
+  useEffect(() => {
+    // 1. Initial Fetch (Standard Request - usually avoids the filter bug)
+    const fetchInitialTasks = async () => {
+      try {
+        const { data } = await client.models.Task.list({ authMode: 'userPool' });
+        setTasks([...data]);
+        console.log("Initial fetch successful:", data);
+      } catch (err) {
+        console.error("Manual fetch failed:", err);
+      }
+    };
 
-  const handleAddTask = () => {
-    if (newTask.trim()) {
-      setTasks([...tasks, { id: Date.now(), content: newTask, status: 'TODO' }]);
-      setNewTask('');
+    fetchInitialTasks();
+
+    // 2. Real-time Subscription (Minimalist approach)
+    // We remove the {} and undefined entirely. Just pass the options.
+    const sub = client.models.Task.observeQuery({
+      authMode: 'userPool'
+    } as any).subscribe({
+      next: ({ items }) => setTasks([...items]),
+      error: (err) => console.warn("Live sync issue, but initial fetch worked:", err)
+    });
+
+    return () => sub.unsubscribe();
+  }, []);
+
+  // 2. Persistent Add
+  const handleAddTask = async () => {
+    if (!newTask.trim()) return;
+
+    try {
+      const { errors } = await client.models.Task.create(
+        {
+          title: newTask,
+          status: 'TODO', 
+        },
+        { authMode: 'userPool' }
+      );
+
+      if (errors) {
+        console.error("Database rejected task:", JSON.stringify(errors, null, 2));
+      } else {
+        setNewTask('');
+      }
+    } catch (err) {
+      console.error("System Error during add:", err);
     }
   };
 
-  const handleDragStart = (id: number) => setDraggedTaskId(id);
-  const handleDrop = (status: string) => {
-    if (draggedTaskId !== null) {
-      if (status === 'Done') {
-        setTasks(tasks.filter(task => task.id !== draggedTaskId));
-      } else {
-        setTasks(tasks.map(task =>
-          task.id === draggedTaskId ? { ...task, status } : task
-        ));
+  // 3. Persistent Move (Drop)
+  const handleDrop = async (newStatus: any) => {
+    if (draggedTaskId) {
+      try {
+        await client.models.Task.update(
+          {
+            id: draggedTaskId,
+            status: newStatus,
+          },
+          { authMode: 'userPool' }
+        );
+      } catch (err) {
+        console.error("Move failed:", err);
       }
       setDraggedTaskId(null);
     }
   };
 
+  // 4. Persistent Delete
+  const handleDelete = async (id: string) => {
+    try {
+      await client.models.Task.delete(
+        { id },
+        { authMode: 'userPool' }
+      );
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  };
+
   return (
-    <div style={{ display: 'flex', gap: 24, padding: 24, background: '#f4f6fa', borderRadius: 16, boxShadow: '0 2px 12px rgba(0,0,0,0.08)' }}>
+    <div style={{ display: 'flex', gap: 20, padding: 20, background: '#0a0a0a', borderRadius: 8, overflowX: 'auto' }}>
       {lanes.map(lane => (
-        <div key={lane.key} style={{ flex: 1, minWidth: 220, background: '#fff', borderRadius: 12, padding: 16, boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}
+        <div 
+          key={lane.key} 
           onDragOver={e => e.preventDefault()}
           onDrop={() => handleDrop(lane.key)}
+          style={{ 
+            flex: 1, 
+            minWidth: 250, 
+            background: '#111', 
+            borderRadius: 6, 
+            padding: 12, 
+            border: '1px solid #333',
+            minHeight: '450px'
+          }}
         >
-          <h3 style={{ textAlign: 'center', color: '#357ae8', marginBottom: 12 }}>{lane.label}</h3>
+          <h3 style={{ color: '#00ff41', fontSize: '0.8rem', fontFamily: 'monospace', borderBottom: '1px solid #333', paddingBottom: 8, letterSpacing: '1px' }}>
+            {lane.label}
+          </h3>
+          
           {lane.key === 'TODO' && (
             <div style={{ marginBottom: 16 }}>
               <input
                 type="text"
                 value={newTask}
                 onChange={e => setNewTask(e.target.value)}
-                placeholder="Add new task..."
-                style={{ width: '100%', padding: 8, borderRadius: 6, border: '1px solid #ccc', marginBottom: 4 }}
+                placeholder="NEW_OBJECTIVE..."
                 onKeyDown={e => { if (e.key === 'Enter') handleAddTask(); }}
+                style={{ 
+                  width: '100%', padding: 10, background: '#000', color: '#00ff41', 
+                  border: '1px solid #00ff41', marginBottom: 6, fontFamily: 'monospace',
+                  outline: 'none', boxSizing: 'border-box'
+                }}
               />
-              <button onClick={handleAddTask} style={{ width: '100%', padding: 8, borderRadius: 6, background: '#357ae8', color: '#fff', border: 'none', cursor: 'pointer' }}>Add</button>
-            </div>
-          )}
-          <div style={{ minHeight: 40 }}>
-            {tasks.filter(task => task.status === lane.key).map(task => (
-              <div
-                key={task.id}
-                draggable
-                onDragStart={() => handleDragStart(task.id)}
-                style={{
-                  background: '#357ae8',
-                  color: '#fff',
-                  marginBottom: 10,
-                  padding: 10,
-                  borderRadius: 8,
-                  boxShadow: '0 1px 3px rgba(53,122,232,0.08)',
-                  cursor: 'grab',
-                  border: draggedTaskId === task.id ? '2px solid #357ae8' : '1px solid #dbeafe',
-                  opacity: draggedTaskId === task.id ? 0.7 : 1,
-                  transition: 'border 0.2s, opacity 0.2s',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  fontWeight: 500,
+              <button
+                onClick={handleAddTask}
+                style={{ 
+                  width: '100%', padding: 8, background: '#00ff41', color: '#000', 
+                  border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 'bold' 
                 }}
               >
-                <span>{task.content}</span>
-                <span
-                  title="Delete task"
-                  style={{ marginLeft: 8, color: '#e53e3e', cursor: 'pointer', fontSize: '1.2em' }}
-                  onClick={() => setTasks(tasks.filter(t => t.id !== task.id))}
-                  role="button"
-                  tabIndex={0}
+                + DEPLOY_TASK
+              </button>
+            </div>
+          )}
+
+          <div style={{ minHeight: '300px' }}>
+            {tasks
+              .filter(t => t.status === lane.key)
+              .map(task => (
+                <div
+                  key={task.id}
+                  draggable
+                  onDragStart={() => setDraggedTaskId(task.id)}
+                  style={{
+                    background: '#1a1a1a',
+                    color: '#ccc',
+                    marginBottom: 10,
+                    padding: 12,
+                    borderRadius: 4,
+                    border: '1px solid #333',
+                    cursor: 'grab',
+                    fontSize: '0.85rem',
+                    opacity: draggedTaskId === task.id ? 0.4 : 1,
+                    transition: 'opacity 0.2s ease'
+                  }}
                 >
-                  🗑️
-                </span>
-              </div>
-            ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontFamily: 'monospace' }}>{task.title}</span>
+                    <span 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(task.id);
+                      }} 
+                      style={{ 
+                        cursor: 'pointer', color: '#ff4b2b', fontSize: '1.2rem', 
+                        padding: '0 4px', lineHeight: 1 
+                      }}
+                      title="TERMINATE_TASK"
+                    >
+                      ×
+                    </span>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       ))}

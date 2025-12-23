@@ -61,12 +61,10 @@ const schema = a.schema({
 
   // 4. THE TASK MANAGER: Powers Kanban Board logic
   Task: a.model({
-    taskId: a.string().required(),
     title: a.string().required(),
-    description: a.string(),
-    status: a.enum(['PENDING', 'IN_PROGRESS', 'COMPLETED']),
+    status: a.enum(['TODO', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED']),
   }).authorization(allow => [allow.owner()]),
-});
+}); // Closes the a.schema block
 
 export type Schema = ClientSchema<typeof schema>;
 
