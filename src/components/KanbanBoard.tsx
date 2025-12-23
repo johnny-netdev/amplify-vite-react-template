@@ -70,31 +70,43 @@ const KanbanBoard: React.FC = () => {
 
   // 3. Persistent Move (Drop)
   const handleDrop = async (newStatus: any) => {
-    if (draggedTaskId) {
-      try {
-        await client.models.Task.update(
-          {
-            id: draggedTaskId,
-            status: newStatus,
-          },
-          { authMode: 'userPool' }
-        );
-      } catch (err) {
-        console.error("Move failed:", err);
-      }
-      setDraggedTaskId(null);
+    if (!draggedTaskId) return;
+
+    // 1. Save the current state in case we need to roll back
+    const previousTasks = [...tasks];
+    
+    // 2. Immediately update the UI
+    setTasks(prev => prev.map(t => 
+      t.id === draggedTaskId ? { ...t, status: newStatus } : t
+    ));
+
+    try {
+      await client.models.Task.update(
+        { id: draggedTaskId, status: newStatus },
+        { authMode: 'userPool' }
+      );
+    } catch (err) {
+      console.error("Move failed, rolling back:", err);
+      setTasks(previousTasks); // Rollback on error
     }
+    setDraggedTaskId(null);
   };
 
   // 4. Persistent Delete
   const handleDelete = async (id: string) => {
+    const previousTasks = [...tasks];
+    
+    // 1. Immediately remove from UI
+    setTasks(prev => prev.filter(t => t.id !== id));
+
     try {
       await client.models.Task.delete(
         { id },
         { authMode: 'userPool' }
       );
     } catch (err) {
-      console.error("Delete failed:", err);
+      console.error("Delete failed, rolling back:", err);
+      setTasks(previousTasks); // Rollback on error
     }
   };
 
