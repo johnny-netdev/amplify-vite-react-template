@@ -1,227 +1,160 @@
 import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { StorageManager } from '@aws-amplify/ui-react-storage'; 
+import { remove } from 'aws-amplify/storage';
 import '@aws-amplify/ui-react/styles.css'; 
 import type { Schema } from '../../amplify/data/resource';
-import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
-import { InteractiveVisual } from '../cissp/InteractiveVisual';
-import { remove } from 'aws-amplify/storage';
-import CISSPDashboard from './CISSP_Dashboard';
 
-interface CISSPAppProps {
+// Import Constants and Sub-Pages
+import { CISSP_DOMAIN_MAP } from '../cissp/constant';
+import CISSPDashboard from './CISSP_Dashboard';
+import CISSPVault from '../cissp/TacticalVaultPage';
+
+const client = generateClient<Schema>();
+
+interface VaultAppProps {
   viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
-  setViewMode: React.Dispatch<React.SetStateAction<'LOBBY' | 'STRATEGIC' | 'TACTICAL'>>;
+  setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
 }
 
-const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
-  const [visuals, setVisuals] = useState<Schema['CisspVisual']['type'][]>([]);
-  const [selectedVisual, setSelectedVisual] = useState<Schema['CisspVisual']['type'] | null>(null);
-  const [showUpload, setShowUpload] = useState(false);
-  const [formData, setFormData] = useState({ title: '', domain: 'RISK_MGMT', description: '' });
-
-  const client = generateClient<Schema>();
-
-  useEffect(() => {
-    const sub = client.models.CisspVisual.observeQuery().subscribe({
-      next: ({ items }) => {
-        setVisuals([...items]);
-        // Note: We removed the auto-select logic here to keep sectors closed on first load
-      },
-    });
-    return () => sub.unsubscribe();
-  }, []);
+const CISSPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [existingVisuals, setExistingVisuals] = useState<any[]>([]);
   
-  const handleUploadSuccess = async (event: { key?: string }) => {
-    const path = event.key; 
-    if (!path) return;
+  const [formData, setFormData] = useState({ 
+    title: '', 
+    domain: 'RISK_MGMT',
+    type: 'LEGACY' as 'QUIZ' | 'DIAGRAM' | 'INTERACTIVE' | 'LEGACY',
+    config: ''
+  });
+
+  // Sync existing modules for the Admin Purge List
+  useEffect(() => {
+    if (showAdmin) {
+      const sub = client.models.CisspVisual.observeQuery().subscribe({
+        next: ({ items }) => setExistingVisuals([...items]),
+      });
+      return () => sub.unsubscribe();
+    }
+  }, [showAdmin]);
+
+  const handleSaveModule = async (s3Path?: string) => {
     try {
       await client.models.CisspVisual.create({
-        title: formData.title || "Untitled Visual",
+        title: formData.title || "Untitled CISSP Intel",
         domain: formData.domain as any,
-        description: formData.description,
-        s3Path: path,
+        type: formData.type,
+        config: formData.config,
+        s3Path: s3Path || '', 
       });
-      setShowUpload(false); 
-      alert("Decryption successful: Module added to vault.");
+      setShowAdmin(false); 
+      setFormData({ ...formData, title: '', config: '' });
+      alert("VAULT_SYNCHRONIZED");
     } catch (err) {
-      console.error("Database save failed:", err);
+      console.error("CISSP Save failed:", err);
     }
   };
 
-  const handleDelete = async (visual: Schema['CisspVisual']['type']) => {
-    const confirmDelete = window.confirm(`Permanently delete "${visual.title}"?`);
-    if (!confirmDelete) return;
-
+  const handlePurge = async (visual: any) => {
+    if (!window.confirm(`Permanently purge "${visual.title}"?`)) return;
     try {
-      if (visual.s3Path) {
-        try {
-          await remove({ path: visual.s3Path });
-        } catch (s3Err) {
-          console.warn("S3 file already missing, proceeding to DB wipe.");
-        }
-      }
+      if (visual.s3Path) await remove({ path: visual.s3Path });
       await client.models.CisspVisual.delete({ id: visual.id });
-      setSelectedVisual(null);
-      alert("Purge successful.");
     } catch (err) {
-      console.error("Critical Failure during purge:", err);
+      console.error("Purge failed:", err);
     }
   };
 
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', width: '100vw', overflowX: 'hidden' }}>
-        <video
-          autoPlay loop muted playsInline
-          style={{
-              position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-              objectFit: 'cover', zIndex: -1, opacity: 0.5 
-          }}
-        >
-          <source src="/backgrounds/3d_moving_hex_background.mp4" type="video/mp4" />
-        </video>
+    <div className='theme-cissp' style={v.container}>
+      {/* Background Layer */}
+      <video key="cissp-bg-video" autoPlay loop muted playsInline style={v.video}>
+        <source src="/backgrounds/3d_moving_hex_background.mp4" type="video/mp4" />
+      </video>
+      <div style={v.vignette} />
+      
+      <div style={v.content}>
+        <header style={v.header}>
+          <h1 style={v.title}>VAULT_ACCESS // CISSP</h1>
+          <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
+            {showAdmin ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
+          </button>
+        </header>
 
-        <div style={{
-          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
-          background: 'radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%)',
-          zIndex: -1, pointerEvents: 'none'
-        }} />
+        {showAdmin && (
+          <div style={v.adminPanel}>
+            <div style={{ marginBottom: '2rem', borderBottom: '1px solid #333', paddingBottom: '2rem' }}>
+              <h3 style={{ color: '#00ff41', marginTop: 0, fontSize: '0.9rem', fontFamily: 'monospace' }}>INTEL_INGESTION_INTERFACE</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <input placeholder="Intel Title" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} style={v.input} />
+                <select value={formData.domain} onChange={e => setFormData({...formData, domain: e.target.value})} style={v.input}>
+                  {Object.entries(CISSP_DOMAIN_MAP).map(([id, name]) => (
+                    <option key={id} value={id}>{name}</option>
+                  ))}
+                </select>
+                <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value as any})} style={{...v.input, borderColor: '#00ff41'}}>
+                  <option value="LEGACY">LEGACY (HTML)</option>
+                  <option value="QUIZ">QUIZ (JSON)</option>
+                  <option value="DIAGRAM">DIAGRAM (JSON)</option>
+                </select>
+              </div>
 
-        <div style={{ padding: '1rem', color: 'white', maxWidth: '1600px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
-            
-            <header style={{ textAlign: 'center', marginBottom: '1rem', position: 'relative' }}>
-              <h1 style={{ color: '#00ff41', fontSize: '1.5rem', textShadow: '0 0 10px #00ff41', opacity: 0.8 }}>
-                VAULT_ACCESS // CISSP
-              </h1>
-              <button 
-                  onClick={() => setShowUpload(!showUpload)}
-                  style={{ 
-                      position: 'absolute', right: 0, top: 0, 
-                      background: 'transparent', color: '#00ff41', border: '1px solid #00ff41',
-                      padding: '5px 10px', cursor: 'pointer', fontSize: '0.8rem'
-                  }}
-              >
-                  {showUpload ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
-              </button>
-            </header>
+              {formData.type === 'LEGACY' ? (
+                <div style={v.protocolBox}>
+                  <p style={v.label}>S3_STORAGE_PROTOCOL_ACTIVE</p>
+                  <StorageManager acceptedFileTypes={['text/html']} path={`media/cissp/${formData.domain}/`} maxFileCount={1} onUploadSuccess={(event) => handleSaveModule(event.key)} />
+                </div>
+              ) : (
+                <div style={v.protocolBox}>
+                  <p style={v.label}>JSON_CONFIG_INJECTION_ACTIVE</p>
+                  <textarea placeholder='Paste JSON...' value={formData.config} onChange={e => setFormData({...formData, config: e.target.value})} style={v.textarea} />
+                  <button onClick={() => handleSaveModule()} style={v.saveBtn}>INJECT TO VAULT</button>
+                </div>
+              )}
+            </div>
 
-            {showUpload && (
-              <div style={{ background: 'rgba(0, 20, 0, 0.8)', backdropFilter: 'blur(10px)', border: '2px solid #00ff41', padding: '2rem', marginBottom: '2rem', borderRadius: '12px' }}>
-                  <h2 style={{ color: '#00ff41', marginTop: 0 }}>Input New Data Module</h2>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                      <input 
-                      placeholder="Module Title" 
-                      onChange={e => setFormData({...formData, title: e.target.value})}
-                      style={{ padding: '10px', background: '#000', color: '#00ff41', border: '1px solid #333' }}
-                      />
-                      <select 
-                      onChange={e => setFormData({...formData, domain: e.target.value})}
-                      style={{ padding: '10px', background: '#000', color: '#00ff41', border: '1px solid #333' }}
-                      >
-                      {Object.entries(CISSP_DOMAIN_MAP).map(([key, label]) => (
-                          <option key={key} value={key}>{label}</option>
-                      ))}
-                      </select>
+            <div>
+              <h3 style={{ color: '#666', fontSize: '0.7rem', letterSpacing: '2px', marginBottom: '1rem' }}>ACTIVE_VAULT_INVENTORY</h3>
+              <div style={v.purgeList}>
+                {existingVisuals.map((vis) => (
+                  <div key={vis.id} style={v.purgeItem}>
+                    <span style={{ fontSize: '0.8rem', fontFamily: 'monospace' }}>
+                      <b style={{ color: '#00ff41', marginRight: '10px' }}>[{vis.type}]</b> {vis.title}
+                    </span>
+                    <button onClick={() => handlePurge(vis)} style={v.purgeBtn}>PURGE</button>
                   </div>
-                  <textarea 
-                      placeholder="Description of the visual concepts..."
-                      onChange={e => setFormData({...formData, description: e.target.value})}
-                      style={{ width: '100%', padding: '10px', background: '#000', color: '#00ff41', border: '1px solid #333', marginBottom: '1rem' }}
-                  />
-                  <StorageManager
-                      acceptedFileTypes={['text/html']}
-                      path={`media/${formData.domain}/`} 
-                      maxFileCount={1}
-                      onUploadSuccess={handleUploadSuccess}
-                  />
+                ))}
               </div>
-            )}
+            </div>
+          </div>
+        )}
 
-            {viewMode === 'STRATEGIC' ? (
-              <CISSPDashboard />
-            ) : (
-              <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', height: '80vh' }}>
-                  <aside style={{ 
-                      width: '350px', background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(12px)',         
-                      WebkitBackdropFilter: 'blur(12px)', padding: '1.5rem', borderRadius: '12px', 
-                      overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
-                  }}>
-                      <h3 style={{ fontSize: '0.7rem', letterSpacing: '2px', color: '#666', marginBottom: '1.5rem', borderBottom: '1px solid #333', paddingBottom: '0.5rem' }}>
-                        INTEL_VAULT // SECTORS
-                      </h3>
-
-                      {Object.entries(CISSP_DOMAIN_MAP).map(([domainKey, domainLabel]) => {
-                        const domainModules = visuals.filter(v => v.domain === domainKey && v.title && v.s3Path);
-                        if (domainModules.length === 0) return null;
-
-                        return (
-                            <details 
-                              key={domainKey} 
-                              // ⭐️ COLLAPSED BY DEFAULT: Only open if a module inside is selected
-                              open={selectedVisual?.domain === domainKey} 
-                              style={{ marginBottom: '1rem', cursor: 'pointer' }}
-                            >
-                            <summary style={{ 
-                                listStyle: 'none', padding: '10px', background: 'rgba(34, 34, 34, 0.5)', 
-                                borderRadius: '4px', borderLeft: `4px solid ${DOMAIN_COLORS[domainKey]}`,
-                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                                fontSize: '0.8rem', fontWeight: 'bold', color: '#eee'
-                            }}>
-                                <span>{domainLabel.split(':')[0]}</span>
-                                <span style={{ fontSize: '0.6rem', background: '#000', padding: '2px 6px', borderRadius: '10px', color: '#888' }}>
-                                {domainModules.length}
-                                </span>
-                            </summary>
-
-                            <div style={{ padding: '10px 0 10px 15px' }}>
-                                {domainModules.map((v) => (
-                                <div 
-                                    key={v.id} 
-                                    onClick={() => setSelectedVisual(v)} 
-                                    style={{ 
-                                      padding: '10px', marginBottom: '5px', borderRadius: '4px', cursor: 'pointer',
-                                      fontSize: '0.85rem',
-                                      background: selectedVisual?.id === v.id ? 'rgba(0, 255, 65, 0.15)' : 'transparent',
-                                      border: selectedVisual?.id === v.id ? '1px solid #00ff41' : '1px solid transparent',
-                                      color: selectedVisual?.id === v.id ? '#00ff41' : '#aaa'
-                                    }}
-                                >
-                                    {v.title}
-                                </div>
-                                ))}
-                            </div>
-                            </details>
-                        );
-                      })}
-                  </aside>
-
-                  <main style={{ 
-                      flex: 1, position: 'relative', background: 'rgba(0, 0, 0, 0.5)', 
-                      backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-                      borderRadius: '12px', padding: '1.5rem', border: '1px solid rgba(255, 255, 255, 0.1)'
-                  }}>
-                      {selectedVisual ? (
-                        <div>
-                            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                              <div>
-                                  <h2 style={{ margin: 0 }}>{selectedVisual.title}</h2>
-                                  <p style={{ color: '#aaa', margin: 0 }}>{selectedVisual.description}</p>
-                              </div>
-                              <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                                  {showUpload && <button onClick={() => handleDelete(selectedVisual)} style={{ background: '#ff4b2b', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}>PURGE MODULE</button>}
-                                  <span style={{ background: DOMAIN_COLORS[selectedVisual.domain || 'RISK_MGMT'], color: 'black', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>{selectedVisual.domain ? CISSP_DOMAIN_MAP[selectedVisual.domain as keyof typeof CISSP_DOMAIN_MAP] : 'General'}</span>
-                              </div>
-                            </div>
-                            <InteractiveVisual key={selectedVisual.s3Path} s3Path={selectedVisual.s3Path} title={selectedVisual.title} />
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%', color: '#444', letterSpacing: '2px' }}>SIGNAL IDLE // AWAITING SELECTION...</div>
-                      )}
-                  </main>
-              </div>
-            )}
+        {/* View Switcher: Matches AWSSAP logic exactly */}
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          {viewMode === 'STRATEGIC' ? <CISSPDashboard /> : <CISSPVault />}
         </div>
+      </div>
     </div>
   );
+};
+
+const v = {
+  container: { position: 'relative' as const, minHeight: '100vh', color: 'white', backgroundColor: 'transparent', overflowX: 'hidden' as const },
+  video: { position: 'fixed' as const, top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' as const, zIndex: -2, opacity: 0.5, backgroundColor: '#000' },
+  vignette: { position: 'fixed' as const, top: 0, left: 0, width: '100%', height: '100%', background: 'radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.9) 100%)', zIndex: -1, pointerEvents: 'none' as const },
+  content: { padding: '1rem', maxWidth: '1600px', margin: '0 auto', position: 'relative' as const, zIndex: 1 },
+  header: { position: 'relative' as const, textAlign: 'center' as const, marginBottom: '1rem' },
+  title: { color: '#00ff41', letterSpacing: '4px', fontSize: '1.5rem', textShadow: '0 0 10px rgba(0,255,65,0.3)', opacity: 0.8 },
+  adminBtn: { position: 'absolute' as const, right: 0, top: 0, background: 'transparent', color: '#00ff41', border: '1px solid #00ff41', cursor: 'pointer', padding: '5px 10px', fontSize: '0.8rem', fontFamily: 'monospace' },
+  adminPanel: { background: 'rgba(0, 0, 0, 0.9)', backdropFilter: 'blur(10px)', border: '2px solid #00ff41', padding: '2rem', marginBottom: '2rem', borderRadius: '12px' },
+  input: { padding: '12px', background: '#000', color: '#00ff41', border: '1px solid #333', fontFamily: 'monospace', outline: 'none' },
+  protocolBox: { border: '1px solid #222', padding: '1.5rem', background: 'rgba(255,255,255,0.02)' },
+  label: { fontSize: '0.6rem', color: '#666', marginBottom: '10px', letterSpacing: '1px' },
+  textarea: { height: '200px', width: '100%', background: '#050505', color: '#00ff41', border: '1px solid #333', padding: '10px', fontFamily: 'monospace', fontSize: '0.8rem', marginBottom: '10px', outline: 'none' },
+  saveBtn: { width: '100%', background: '#00ff41', color: 'black', border: 'none', padding: '12px', cursor: 'pointer', fontWeight: 'bold' as const, fontFamily: 'monospace' },
+  purgeList: { display: 'flex', flexDirection: 'column' as const, gap: '10px' },
+  purgeItem: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px', background: 'rgba(34,34,34,0.5)', borderRadius: '4px' },
+  purgeBtn: { background: '#ff4b2b', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' as const }
 };
 
 export default CISSPApp;
