@@ -1,81 +1,128 @@
 import React, { useState } from 'react';
+import { generateClient } from 'aws-amplify/data';
 import { StorageManager } from '@aws-amplify/ui-react-storage'; 
-import SecPlusDashboard from './SecurityPlus_Dashboard';
+import '@aws-amplify/ui-react/styles.css'; 
+import type { Schema } from '../../amplify/data/resource';
 
-// ⭐️ Line 6-9: Updated Props to include setViewMode to fix the App.tsx build error
-type Props = {
+// Import local components and constants
+import { SEC_PLUS_RAW_DATA } from '../securityplus/constant';
+import SecurityPlusDashboard from './SecurityPlus_Dashboard';
+import SecurityPlusVaultPage from '../securityplus/TacticalVaultPage';
+
+const client = generateClient<Schema>();
+
+interface VaultAppProps {
   viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
-  setViewMode: React.Dispatch<React.SetStateAction<'LOBBY' | 'STRATEGIC' | 'TACTICAL'>>;
-};
+  setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
+}
 
-// ⭐️ Line 12: Shared domain list for the Tactical Sidebar
-const SEC_PLUS_DOMAINS = [
-  "General Security Concepts",
-  "Threats, Vulnerabilities & Mitigations",
-  "Security Architecture",
-  "Security Operations",
-  "Governance, Risk & Compliance"
-];
-
-const SecurityPlusApp: React.FC<Props> = ({ viewMode }) => {
+const SecurityPlusApp: React.FC<VaultAppProps> = ({ viewMode }) => {
   const [showAdmin, setShowAdmin] = useState(false);
+  
+  // Initialize with the first domain ID from Sec+ raw data
+  const [formData, setFormData] = useState({ 
+    title: '', 
+    domain: SEC_PLUS_RAW_DATA[0]?.id || '' 
+  });
+
+  const handleUploadSuccess = async (event: { key?: string }) => {
+    if (!event.key) return;
+    try {
+      await client.models.SecPlusVisual.create({
+        title: formData.title || "New Security Intelligence Module",
+        domain: formData.domain as any,
+        s3Path: event.key,
+      });
+      setShowAdmin(false); 
+      alert("Security+ Intelligence Module Synced and Secured.");
+    } catch (err) {
+      console.error("Security+ Database save failed:", err);
+      alert("Critical Error: Database Sync Failed.");
+    }
+  };
 
   return (
     <div style={v.container}>
       <video autoPlay loop muted playsInline style={v.video}>
         <source src="/backgrounds/3d_moving_hex_background.mp4" type="video/mp4" />
       </video>
+      <div style={v.vignette} />
       
       <div style={v.content}>
-        <div style={v.header}>
-          <h1 style={v.title}>VAULT_ACCESS // SECURITY+</h1>
+        <header style={v.header}>
+          <h1 style={v.title}>VAULT_ACCESS // CompTIA Security+</h1>
           <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
-            {showAdmin ? '[ CLOSE ]' : '[ ADMIN_ACCESS ]'}
+            {showAdmin ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
           </button>
-        </div>
+        </header>
 
+        {/* FUNCTIONAL ADMIN PANEL */}
         {showAdmin && (
-          <div style={v.uploadPanel}>
-            <StorageManager path="media/secplus/" maxFileCount={1} onUploadSuccess={() => setShowAdmin(false)} />
+          <div style={v.adminPanel}>
+            <h3 style={{ color: '#00ff41', marginTop: 0, fontSize: '0.9rem' }}>SEC_INGEST_PROTOCOL</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <input 
+                placeholder="Intelligence Module Name" 
+                onChange={e => setFormData({...formData, title: e.target.value})}
+                style={v.input}
+              />
+              <select 
+                value={formData.domain}
+                onChange={e => setFormData({...formData, domain: e.target.value})}
+                style={v.input}
+              >
+                {SEC_PLUS_RAW_DATA.map((domainObj: any) => (
+                  <option key={domainObj.id} value={domainObj.id}>
+                    {domainObj.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <StorageManager
+              acceptedFileTypes={['text/html']}
+              path={`media/secplus/${formData.domain}/`} 
+              maxFileCount={1}
+              onUploadSuccess={handleUploadSuccess}
+            />
           </div>
         )}
 
-        {viewMode === 'STRATEGIC' ? (
-          <SecPlusDashboard /> 
-        ) : (
-          <div style={v.tactical}>
-             <aside style={v.sidebar}>
-                <h3 style={{ fontSize: '0.8rem', color: '#666', borderBottom: '1px solid #333', paddingBottom: '10px' }}>
-                    INTEL_SECTORS
-                </h3>
-                {/* ⭐️ Line 49: Mapping the domains in the sidebar to match the dashboard */}
-                {SEC_PLUS_DOMAINS.map((domain, i) => (
-                  <div key={i} style={v.item}>
-                    <span style={{ color: '#666', marginRight: '8px' }}>▸</span>
-                    {domain.toUpperCase()}
-                  </div>
-                ))}
-             </aside>
-             <main style={v.main}>AWAITING_DATA_SELECTION...</main>
-          </div>
-        )}
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          {viewMode === 'STRATEGIC' ? (
+            <SecurityPlusDashboard />
+          ) : (
+            <SecurityPlusVaultPage />
+          )}
+        </div>
       </div>
     </div>
   );
 };
 
 const v = {
-  container: { position: 'relative' as const, minHeight: '100vh', color: 'white' },
+  container: { position: 'relative' as const, minHeight: '100vh', color: 'white', backgroundColor: '#000' },
   video: { position: 'fixed' as const, top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' as const, zIndex: -1, opacity: 0.4 },
-  content: { padding: '2rem', paddingTop: '80px', maxWidth: '1400px', margin: '0 auto' },
+  vignette: { position: 'fixed' as const, top: 0, left: 0, width: '100%', height: '100%', background: 'radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.9) 100%)', zIndex: -1, pointerEvents: 'none' as const },
+  content: { padding: '2rem', paddingTop: '80px', maxWidth: '1600px', margin: '0 auto', position: 'relative' as const, zIndex: 1 },
   header: { position: 'relative' as const, textAlign: 'center' as const, marginBottom: '2rem' },
-  title: { color: '#00ff41', letterSpacing: '4px', fontSize: '1.5rem' },
-  adminBtn: { position: 'absolute' as const, right: 0, top: 0, background: 'transparent', color: '#00ff41', border: '1px solid #00ff41', cursor: 'pointer', padding: '5px 10px', fontSize: '0.8rem' },
-  uploadPanel: { background: 'rgba(0,20,0,0.9)', padding: '20px', border: '1px solid #00ff41', marginBottom: '20px', borderRadius: '8px' },
-  tactical: { display: 'flex', gap: '20px', height: '75vh' },
-  sidebar: { width: '350px', background: 'rgba(10,10,10,0.8)', padding: '20px', border: '1px solid #333', borderRadius: '12px', overflowY: 'auto' as const },
-  item: { padding: '12px 10px', color: '#00ff41', fontSize: '0.75rem', borderBottom: '1px solid #1a1a1a', cursor: 'pointer', fontFamily: 'monospace' },
-  main: { flex: 1, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', borderRadius: '12px', border: '1px solid #222', letterSpacing: '2px' }
+  title: { color: '#00ff41', letterSpacing: '4px', fontSize: '1.5rem', textShadow: '0 0 10px rgba(0, 255, 65, 0.3)' },
+  adminBtn: { position: 'absolute' as const, right: 0, top: 0, background: 'transparent', color: '#00ff41', border: '1px solid #00ff41', cursor: 'pointer', padding: '5px 10px', fontSize: '0.8rem', fontFamily: 'monospace' },
+  adminPanel: { 
+    background: 'rgba(0, 20, 0, 0.95)', 
+    backdropFilter: 'blur(10px)',
+    border: '1px solid #00ff41', 
+    padding: '2rem', 
+    marginBottom: '2rem', 
+    borderRadius: '12px' 
+  },
+  input: { 
+    padding: '12px', 
+    background: '#000', 
+    color: '#00ff41', 
+    border: '1px solid #00ff41', 
+    fontFamily: 'monospace',
+    outline: 'none'
+  }
 };
 
 export default SecurityPlusApp;

@@ -1,14 +1,27 @@
-// amplify/data/resource.ts
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
 const schema = a.schema({
-  // 1. THE VAULT: Metadata for your interactive HTML modules
+  // 1. THE VAULTS: Metadata for your interactive HTML modules
   CisspVisual: a.model({
     title: a.string().required(),
     domain: a.string().required(), 
     description: a.string(),
     s3Path: a.string().required(),
-  }).authorization(allow => [allow.authenticated()]),
+  }).authorization(allow => [allow.publicApiKey()]),
+
+  AwsVisual: a.model({
+    title: a.string().required(),
+    domain: a.string().required(),
+    description: a.string(),
+    s3Path: a.string().required(),
+  }).authorization(allow => [allow.publicApiKey()]),
+
+  SecPlusVisual: a.model({
+    title: a.string().required(),
+    domain: a.string().required(),
+    description: a.string(),
+    s3Path: a.string().required(),
+  }).authorization(allow => [allow.publicApiKey()]),
 
   // 2. THE TELEMETRY: Stores every quiz/game result for weighted readiness math
   UserActivity: a.model({
@@ -20,7 +33,7 @@ const schema = a.schema({
     timestamp: a.datetime().required(),
   }).authorization(allow => [allow.authenticated()]),
 
-  // 3. THE PROFILE: Stores user-specific info (referenced in your App.tsx)
+  // 3. THE PROFILE: Stores user-specific info
   UserProfile: a.model({
     userId: a.string().required(),
     username: a.string(),
@@ -42,6 +55,7 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'userPool',
+    // Defaulting to API Key for the Visuals, but keeping UserPool for Profile/Task
+    defaultAuthorizationMode: 'apiKey',
   },
 });
