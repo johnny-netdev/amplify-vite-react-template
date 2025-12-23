@@ -48,7 +48,7 @@ const KanbanBoard: React.FC = () => {
     if (!newTask.trim()) return;
 
     try {
-      const { errors } = await client.models.Task.create(
+      const { data: newEntry, errors } = await client.models.Task.create(
         {
           title: newTask,
           status: 'TODO', 
@@ -58,7 +58,9 @@ const KanbanBoard: React.FC = () => {
 
       if (errors) {
         console.error("Database rejected task:", JSON.stringify(errors, null, 2));
-      } else {
+      } else if (newEntry) {
+        // 🚀 MANUALLY update the UI so you don't have to refresh
+        setTasks((prev) => [...prev, newEntry]);
         setNewTask('');
       }
     } catch (err) {
