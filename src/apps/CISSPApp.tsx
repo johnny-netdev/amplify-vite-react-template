@@ -6,7 +6,7 @@ import '@aws-amplify/ui-react/styles.css';
 import type { Schema } from '../../amplify/data/resource';
 
 // Import Constants and Sub-Pages
-import { CISSP_DOMAIN_MAP } from '../cissp/constant';
+import { CISSP_DOMAIN_MAP, CISSP_TERMINAL } from '../cissp/constant';
 import CISSPDashboard from './CISSP_Dashboard';
 import CISSPVault from '../cissp/TacticalVaultPage';
 
@@ -131,7 +131,7 @@ const CISSPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
 
         {/* View Switcher: Matches AWSSAP logic exactly */}
         <div style={{ position: 'relative', zIndex: 1 }}>
-          {viewMode === 'STRATEGIC' ? <CISSPDashboard /> : <CISSPVault />}
+          {viewMode === 'STRATEGIC' ? <CISSPDashboard /> : <CISSPVault accentColor={CISSP_TERMINAL.accent} />}
         </div>
       </div>
     </div>

@@ -1,7 +1,6 @@
-import { type Schema } from "../../amplify/data/resource";
 
 // Mapping of CISSP domain codes to their full names
-export const CISSP_DOMAIN_MAP: Record<NonNullable<Schema['CisspVisual']['type']['domain']>, string> = {
+export const CISSP_DOMAIN_MAP: Record<string, string> = {
   RISK_MGMT: 'Domain 1: Security and Risk Management',
   ASSET_SEC: 'Domain 2: Asset Security',
   SEC_ARCH_ENG: 'Domain 3: Security Architecture and Engineering',

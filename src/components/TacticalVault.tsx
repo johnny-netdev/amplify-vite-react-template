@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { getUrl } from 'aws-amplify/storage';
 import type { Schema } from '../../amplify/data/resource';
+import VisualRenderer from './tactical_library/VisualRenderer';
 
 const client = generateClient<Schema>();
 
@@ -99,18 +100,36 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
 
       {/* MAIN VIEWPORT */}
       <main style={s.main}>
-        {activeUrl ? (
+        {selectedVisual ? (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div style={s.intelHeader}>
               <div>
-                <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem' }}>{selectedVisual?.title}</h2>
-                <p style={{ margin: 0, fontSize: '0.7rem', color: '#666' }}>{selectedVisual?.description || 'No description provided.'}</p>
+                <h2 style={{ margin: 0, color: '#fff', fontSize: '1.2rem' }}>{selectedVisual.title}</h2>
+                <p style={{ margin: 0, fontSize: '0.7rem', color: '#666' }}>{selectedVisual.description || 'No description provided.'}</p>
               </div>
-              <span style={{ ...s.domainTag, background: domainColors[selectedVisual?.domain] || accentColor }}>
-                {selectedVisual?.domain}
+              <span style={{ ...s.domainTag, background: domainColors[selectedVisual.domain] || accentColor }}>
+                {selectedVisual.domain}
               </span>
             </div>
-            <iframe src={activeUrl} style={s.iframe} title="Intel Display" />
+            
+            {/* ⭐️ Use VisualRenderer instead of raw <iframe> */}
+            <div style={{ flex: 1, position: 'relative' }}>
+              <VisualRenderer 
+                key={`${selectedVisual.id}`}
+                type={selectedVisual.type}
+                content={(() => {
+                  try {
+                    return selectedVisual.type === 'LEGACY' 
+                      ? activeUrl 
+                      : JSON.parse(selectedVisual.config || '{"questions":[]}');
+                  } catch (e) {
+                    console.error("JSON Parse Error:", e);
+                    return { questions: [] };
+                  }
+                })()}
+                accentColor={accentColor}
+              />
+            </div>
           </div>
         ) : (
           <div style={s.idle}>
