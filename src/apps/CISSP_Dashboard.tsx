@@ -135,10 +135,12 @@ const CISSPDashboard: React.FC = () => {
               onMouseOver={(e) => {
                 e.currentTarget.style.borderColor = CISSP_TERMINAL.buttonBorder;
                 e.currentTarget.style.backgroundColor = CISSP_TERMINAL.buttonHoverBg;
+                e.currentTarget.style.color = CISSP_TERMINAL.buttonText;
               }}
               onMouseOut={(e) => {
                 e.currentTarget.style.borderColor = '#1a1a1a';
                 e.currentTarget.style.backgroundColor = 'transparent';
+                e.currentTarget.style.color = '#00ff41';
               }}
             >
               [ {action} ]

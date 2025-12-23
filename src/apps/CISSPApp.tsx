@@ -8,8 +8,6 @@ import { InteractiveVisual } from '../cissp/InteractiveVisual';
 import { remove } from 'aws-amplify/storage';
 import CISSPDashboard from './CISSP_Dashboard';
 
-
-// 1. Updated Interface to match the Dispatch type from App.tsx
 interface CISSPAppProps {
   viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
   setViewMode: React.Dispatch<React.SetStateAction<'LOBBY' | 'STRATEGIC' | 'TACTICAL'>>;
@@ -18,22 +16,21 @@ interface CISSPAppProps {
 const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
   const [visuals, setVisuals] = useState<Schema['CisspVisual']['type'][]>([]);
   const [selectedVisual, setSelectedVisual] = useState<Schema['CisspVisual']['type'] | null>(null);
-  
   const [showUpload, setShowUpload] = useState(false);
   const [formData, setFormData] = useState({ title: '', domain: 'RISK_MGMT', description: '' });
+
+  const client = generateClient<Schema>();
 
   useEffect(() => {
     const sub = client.models.CisspVisual.observeQuery().subscribe({
       next: ({ items }) => {
         setVisuals([...items]);
-        if (items.length > 0 && !selectedVisual) setSelectedVisual(items[0]);
+        // Note: We removed the auto-select logic here to keep sectors closed on first load
       },
     });
     return () => sub.unsubscribe();
-  }, [selectedVisual]);
+  }, []);
   
-  const client = generateClient<Schema>();
-
   const handleUploadSuccess = async (event: { key?: string }) => {
     const path = event.key; 
     if (!path) return;
@@ -73,32 +70,22 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh', width: '100vw', overflowX: 'hidden' }}>
-        {/* THE SIGNAL ONE BACKGROUND THEATER */}
         <video
           autoPlay loop muted playsInline
           style={{
-              position: 'fixed',
-              top: 0, left: 0,
-              width: '100%', height: '100%',
-              objectFit: 'cover',
-              zIndex: -1,
-              opacity: 0.5 
+              position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+              objectFit: 'cover', zIndex: -1, opacity: 0.5 
           }}
         >
           <source src="/backgrounds/3d_moving_hex_background.mp4" type="video/mp4" />
         </video>
 
-        {/* VIGNETTE OVERLAY */}
         <div style={{
-          position: 'fixed',
-          top: 0, left: 0,
-          width: '100%', height: '100%',
+          position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
           background: 'radial-gradient(circle, rgba(0,0,0,0) 0%, rgba(0,0,0,0.8) 100%)',
-          zIndex: -1,
-          pointerEvents: 'none'
+          zIndex: -1, pointerEvents: 'none'
         }} />
 
-        {/* APP CONTENT LAYER */}
         <div style={{ padding: '1rem', color: 'white', maxWidth: '1600px', margin: '0 auto', position: 'relative', zIndex: 1 }}>
             
             <header style={{ textAlign: 'center', marginBottom: '1rem', position: 'relative' }}>
@@ -149,21 +136,14 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
               </div>
             )}
 
-            {/* DYNAMIC VIEW SWITCHING */}
             {viewMode === 'STRATEGIC' ? (
               <CISSPDashboard />
             ) : (
               <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', height: '80vh' }}>
                   <aside style={{ 
-                      width: '350px', 
-                      background: 'rgba(10, 10, 10, 0.7)', 
-                      backdropFilter: 'blur(12px)',         
-                      WebkitBackdropFilter: 'blur(12px)',
-                      padding: '1.5rem', 
-                      borderRadius: '12px', 
-                      overflowY: 'auto', 
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
+                      width: '350px', background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(12px)',         
+                      WebkitBackdropFilter: 'blur(12px)', padding: '1.5rem', borderRadius: '12px', 
+                      overflowY: 'auto', border: '1px solid rgba(255, 255, 255, 0.1)', boxShadow: 'inset 0 0 20px rgba(0,0,0,0.5)'
                   }}>
                       <h3 style={{ fontSize: '0.7rem', letterSpacing: '2px', color: '#666', marginBottom: '1.5rem', borderBottom: '1px solid #333', paddingBottom: '0.5rem' }}>
                         INTEL_VAULT // SECTORS
@@ -174,12 +154,15 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
                         if (domainModules.length === 0) return null;
 
                         return (
-                            <details key={domainKey} open style={{ marginBottom: '1rem', cursor: 'pointer' }}>
+                            <details 
+                              key={domainKey} 
+                              // ⭐️ COLLAPSED BY DEFAULT: Only open if a module inside is selected
+                              open={selectedVisual?.domain === domainKey} 
+                              style={{ marginBottom: '1rem', cursor: 'pointer' }}
+                            >
                             <summary style={{ 
-                                listStyle: 'none', padding: '10px', 
-                                background: 'rgba(34, 34, 34, 0.5)', 
-                                borderRadius: '4px', 
-                                borderLeft: `4px solid ${DOMAIN_COLORS[domainKey]}`,
+                                listStyle: 'none', padding: '10px', background: 'rgba(34, 34, 34, 0.5)', 
+                                borderRadius: '4px', borderLeft: `4px solid ${DOMAIN_COLORS[domainKey]}`,
                                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                                 fontSize: '0.8rem', fontWeight: 'bold', color: '#eee'
                             }}>
@@ -212,14 +195,9 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
                   </aside>
 
                   <main style={{ 
-                      flex: 1, 
-                      position: 'relative', 
-                      background: 'rgba(0, 0, 0, 0.5)', 
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
-                      borderRadius: '12px',
-                      padding: '1.5rem',
-                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                      flex: 1, position: 'relative', background: 'rgba(0, 0, 0, 0.5)', 
+                      backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                      borderRadius: '12px', padding: '1.5rem', border: '1px solid rgba(255, 255, 255, 0.1)'
                   }}>
                       {selectedVisual ? (
                         <div>
@@ -230,7 +208,7 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
                               </div>
                               <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
                                   {showUpload && <button onClick={() => handleDelete(selectedVisual)} style={{ background: '#ff4b2b', color: 'white', border: 'none', padding: '5px 15px', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 'bold' }}>PURGE MODULE</button>}
-                                  <span style={{ background: DOMAIN_COLORS[selectedVisual.domain || 'RISK_MGMT'], color: 'black', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>{selectedVisual.domain ? CISSP_DOMAIN_MAP[selectedVisual.domain] : 'General'}</span>
+                                  <span style={{ background: DOMAIN_COLORS[selectedVisual.domain || 'RISK_MGMT'], color: 'black', padding: '4px 12px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold' }}>{selectedVisual.domain ? CISSP_DOMAIN_MAP[selectedVisual.domain as keyof typeof CISSP_DOMAIN_MAP] : 'General'}</span>
                               </div>
                             </div>
                             <InteractiveVisual key={selectedVisual.s3Path} s3Path={selectedVisual.s3Path} title={selectedVisual.title} />
