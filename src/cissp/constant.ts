@@ -23,3 +23,10 @@ export const DOMAIN_COLORS: Record<string, string> = {
   SEC_OPS: '#a64dff',
   SOFTWARE_DEV_SEC: '#ff4dff',
 };
+
+export const CISSP_TERMINAL = {
+  buttonBorder: '#234de5ff',
+  buttonText: '#234de5ff',
+  buttonHoverBg: 'rgba(0, 255, 65, 0.1)',
+  accent: '#234de5ff'
+};

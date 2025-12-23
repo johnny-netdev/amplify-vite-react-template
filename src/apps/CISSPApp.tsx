@@ -6,8 +6,7 @@ import type { Schema } from '../../amplify/data/resource';
 import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
 import { InteractiveVisual } from '../cissp/InteractiveVisual';
 import { remove } from 'aws-amplify/storage';
-// ⭐️ Ensure this matches your specific dashboard file name
-import SOCDashboard from './CISSP_Dashboard';
+import CISSPDashboard from './CISSP_Dashboard';
 
 
 // 1. Updated Interface to match the Dispatch type from App.tsx
@@ -152,7 +151,7 @@ const CISSPApp: React.FC<CISSPAppProps> = ({ viewMode }) => {
 
             {/* DYNAMIC VIEW SWITCHING */}
             {viewMode === 'STRATEGIC' ? (
-              <SOCDashboard />
+              <CISSPDashboard />
             ) : (
               <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem', height: '80vh' }}>
                   <aside style={{ 
