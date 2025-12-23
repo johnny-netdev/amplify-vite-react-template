@@ -1,5 +1,5 @@
 import React from 'react';
-import TacticalQuiz from './TacticalQuiz';
+import TacticalQuiz from '../vault/TacticalQuiz';
 import TacticalInfographic from './TacticalInfographic';
 import InteractiveCanvas from './InteractiveCanvas';
 

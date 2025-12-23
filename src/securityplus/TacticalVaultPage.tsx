@@ -1,5 +1,5 @@
 import React from 'react';
-import TacticalVault from '../components/TacticalVault';
+import TacticalVault from '../components/vault/TacticalVault';
 import { SEC_PLUS_RAW_DATA, SEC_PLUS_COLORS } from './constant';
 
 const SecurityPlusVaultPage: React.FC = () => {

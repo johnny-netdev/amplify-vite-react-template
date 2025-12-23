@@ -1,5 +1,5 @@
 import React from 'react';
-import TacticalVault from '../components/TacticalVault';
+import TacticalVault from '../components/vault/TacticalVault';
 import { AWS_SAP_RAW_DATA, AWS_COLORS } from './constant';
 
 const AWSSAPVaultPage: React.FC = () => {

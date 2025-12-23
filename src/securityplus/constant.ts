@@ -9,12 +9,20 @@ export const SEC_PLUS_RAW_DATA: DomainData[] = [
   { id: '5', name: 'Governance, Risk & Compliance', weight: 1, userScore: 0.55 },
 ];
 
+export const COMPTIA_THEME = {
+  ORANGE: '#ff6600',
+  BLUE: '#0073ae',
+  NAVY: '#002663',
+  SUCCESS: '#28a745', // Standard security green
+  CRITICAL: '#dc3545', // Alert/Vulnerability red
+};
+
 export const SEC_PLUS_COLORS: Record<string, string> = {
-  '1': '#00ff41',
-  '2': '#ff4b2b',
-  '3': '#357ae8',
-  '4': '#f0db4f',
-  '5': '#a020f0',
+  'D1': COMPTIA_THEME.BLUE,
+  'D2': COMPTIA_THEME.ORANGE,
+  'D3': COMPTIA_THEME.NAVY,
+  'D4': '#8ca4ac', // Cadet Blue for neutral modules
+  'D5': '#7d9cb7', // Steel Blue for management modules
 };
 
 export const SEC_PLUS_TERMINAL = {

@@ -10,21 +10,23 @@ export const CISSP_DOMAIN_MAP: Record<string, string> = {
   SEC_OPS: 'Domain 7: Security Operations',
   SOFTWARE_DEV_SEC: 'Domain 8: Software Development Security',
 };
+const ISC2_BLUE = '#00829b';
+const ISC2_NAVY = '#002b45';
 
 // Helpful for colors if you want to color-code your cards by domain
 export const DOMAIN_COLORS: Record<string, string> = {
-  RISK_MGMT: '#ff4d4d',
-  ASSET_SEC: '#ffa64d',
-  SEC_ARCH_ENG: '#ffff4d',
-  COMM_NET_SEC: '#4dff4d',
-  IAM: '#4dffff',
-  SEC_ASSESS_TEST: '#4d4dff',
-  SEC_OPS: '#a64dff',
-  SOFTWARE_DEV_SEC: '#ff4dff',
+  RISK_MGMT: ISC2_BLUE,
+  ASSET_SEC: ISC2_BLUE,
+  SEC_ARCH_ENG: ISC2_BLUE,
+  COMM_NET_SEC: ISC2_BLUE,
+  IAM: ISC2_BLUE,
+  SEC_ASSESS_TEST: ISC2_BLUE,
+  SEC_OPS: ISC2_BLUE,
+  SOFTWARE_DEV_SEC: ISC2_BLUE,
 };
 
 export const CISSP_TERMINAL = {
-  buttonBorder: '#234de5ff',
+  buttonBorder: ISC2_NAVY,
   buttonText: '#234de5ff',
   buttonHoverBg: 'rgba(0, 255, 65, 0.1)',
   accent: '#234de5ff'

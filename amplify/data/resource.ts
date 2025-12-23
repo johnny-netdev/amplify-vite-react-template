@@ -63,6 +63,14 @@ const schema = a.schema({
   Task: a.model({
     title: a.string().required(),
     status: a.enum(['TODO', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED']),
+    score: a.integer(),         // Percentage score if applicable
+
+    // NEW INTELLIGENCE FIELDS
+    origin: a.enum(['QUIZ_FAILURE', 'TERMINAL_DIAGNOSTIC', 'MANUAL', 'DECAY_RECOVERY']),
+    domain: a.string(),      // e.g., "Domain 4", "IAM", "Encryption"
+    drillId: a.string(),     // The specific quiz or visual ID to launch
+    priority: a.integer(),   // Based on how badly they failed (0-10)
+    metadata: a.json(),      // To store specific quiz results or fail-logs
   }).authorization(allow => [allow.owner()]),
 }); // Closes the a.schema block
 

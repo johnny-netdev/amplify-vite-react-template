@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import { useVaultEngine, DomainData } from '../utils/vaultEngine';
-import { AWS_SAP_RAW_DATA, AWS_COLORS, AWS_TERMINAL } from '../aws/constant';
+import { AWS_SAP_RAW_DATA, AWS_COLORS } from '../aws/constant';
+import ActionTerminal from '../components/terminal/ActionTerminal';
 
-const AWSSAPDashboard: React.FC = () => {
-  // ⭐️ FIXED: Added missing startTime for the fatigue engine
+// AWS THEME CONSTANTS
+const AWS_ORANGE = '#FF9900';
+const AWS_DEEP_SQUID = '#232F3E';
+
+interface AWSSAPDashboardProps {
+  preLoadedDrillId?: string | null;
+  onDrillStarted?: () => void;
+}
+
+const AWSSAPDashboard: React.FC<AWSSAPDashboardProps> = ({ preLoadedDrillId, onDrillStarted }) => {
   const [startTime] = useState(Date.now());
 
-  // ⭐️ FIXED: Using the Modular Engine (Removed old manual math)
   const { 
     competencyScore, 
     fatigueString, 
@@ -15,14 +23,13 @@ const AWSSAPDashboard: React.FC = () => {
 
   return (
     <div style={styles.dashboardWrapper}>
-      {/* --- LEFT SIDE: STRATEGIC INTEL (70%) --- */}
+      {/* --- LEFT SIDE: STRATEGIC INTEL (65%) --- */}
       <div style={styles.leftColumn}>
         <header style={styles.header}>
           <h2 style={styles.title}>STRATEGIC_INTEL // AWS_SAP_C02_SOC</h2>
           <div style={styles.burnoutMonitor}>
             <span style={styles.label}>OPERATOR_FATIGUE:</span>
-            {/* ⭐️ FIXED: Dynamic value from engine */}
-            <span style={styles.value}>{fatigueString}</span>
+            <span style={{...styles.value, color: AWS_ORANGE}}>{fatigueString}</span>
           </div>
         </header>
 
@@ -30,28 +37,31 @@ const AWSSAPDashboard: React.FC = () => {
         <div style={styles.metricsRow}>
           <div style={styles.metricCard}>
             <div style={styles.metricLabel}>WEIGHTED_COMPETENCY</div>
-            <div style={styles.metricValue}>{competencyScore}%</div>
+            <div style={{...styles.metricValue, color: AWS_ORANGE}}>{competencyScore}%</div>
             <div style={styles.progressBar}>
-              <div style={{...styles.progressFill, width: `${competencyScore}%`}} />
+              <div style={{
+                ...styles.progressFill, 
+                width: `${competencyScore}%`,
+                background: AWS_ORANGE,
+                boxShadow: `0 0 10px ${AWS_ORANGE}`
+              }} />
             </div>
           </div>
           <div style={styles.metricCard}>
             <div style={styles.metricLabel}>ARCHITECT_STATUS</div>
-            {/* ⭐️ FIXED: Dynamic label from engine */}
-            <div style={{...styles.metricValue, color: '#00ff41'}}>{stabilityLabel}</div>
+            <div style={{...styles.metricValue, color: '#FFFFFF'}}>{stabilityLabel}</div>
             <div style={styles.footer}>AWS Certified Solutions Architect - Pro</div>
           </div>
         </div>
 
         {/* Domain Breakdown */}
         <div style={styles.domainGrid}>
-          {/* ⭐️ FIXED: Mapping over AWS_SAP_RAW_DATA with proper typing */}
           {AWS_SAP_RAW_DATA.map((domain: DomainData, i: number) => (
             <div 
               key={domain.id} 
               style={{
                 ...styles.domainCard,
-                borderLeft: `4px solid ${AWS_COLORS[domain.id] || '#333'}`
+                borderLeft: `4px solid ${AWS_COLORS[domain.id] || AWS_ORANGE}`
               }}
             >
               <div style={styles.domainInfo}>
@@ -61,8 +71,8 @@ const AWSSAPDashboard: React.FC = () => {
               </div>
               <div style={{
                 ...styles.status,
-                color: AWS_COLORS[domain.id] || '#00ff41',
-                borderColor: AWS_COLORS[domain.id] || '#004400'
+                color: AWS_COLORS[domain.id] || AWS_ORANGE,
+                borderColor: AWS_COLORS[domain.id] || AWS_ORANGE
               }}>
                 {Math.round(domain.userScore * 100)}%
               </div>
@@ -71,62 +81,13 @@ const AWSSAPDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* --- RIGHT SIDE: TEST ENGINE TERMINAL (30%) --- */}
+      {/* --- RIGHT SIDE: ACTION TERMINAL (35%) --- */}
       <div style={styles.rightColumn}>
-        <div style={styles.terminalHeader}>ACTION_TERMINAL</div>
-        <div style={styles.terminalBody}>
-          <button 
-            style={styles.testButton}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = AWS_TERMINAL.buttonBorder;
-              e.currentTarget.style.backgroundColor = AWS_TERMINAL.buttonHoverBg;
-              e.currentTarget.style.color = AWS_TERMINAL.buttonText;
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#1a1a1a';
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#00ff41';
-            }}
-          >
-            [ RUN_SAP_PRACTICE_EXAM ]
-          </button>
-          <button 
-            style={styles.testButton}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = AWS_TERMINAL.buttonBorder;
-              e.currentTarget.style.backgroundColor = AWS_TERMINAL.buttonHoverBg;
-              e.currentTarget.style.color = AWS_TERMINAL.buttonText;
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#1a1a1a';
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#00ff41';
-            }}
-          >
-            [ ARCHITECTURE_SCENARIO_DRILL ]
-          </button>
-          <button 
-            style={styles.testButton}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = AWS_TERMINAL.buttonBorder;
-              e.currentTarget.style.backgroundColor = AWS_TERMINAL.buttonHoverBg;
-              e.currentTarget.style.color = AWS_TERMINAL.buttonText;
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#1a1a1a';
-              e.currentTarget.style.backgroundColor = 'transparent';
-              e.currentTarget.style.color = '#00ff41';
-            }}
-          >
-            [ WHITE_PAPER_RECALL ]
-          </button>
-          
-          <div style={styles.terminalFooter}>
-            AWAITING_OPERATOR_INPUT...
-            <br />
-            TARGET_CERT: AWS_SAP_C02
-          </div>
-        </div>
+        {/* Swapped static buttons for the Live Action Terminal */}
+        <ActionTerminal 
+          preLoadedDrillId={preLoadedDrillId} 
+          onDrillStarted={onDrillStarted}
+        />
       </div>
     </div>
   );
@@ -134,31 +95,33 @@ const AWSSAPDashboard: React.FC = () => {
 
 const styles = {
   dashboardWrapper: { display: 'flex' as const, gap: '20px', width: '100%', minHeight: '80vh', fontFamily: 'monospace' },
-  leftColumn: { flex: '0 0 70%', padding: '10px' },
-  rightColumn: { flex: '0 0 30%', padding: '20px', borderLeft: '1px solid #111', background: 'rgba(0, 255, 65, 0.02)' },
-  header: { display: 'flex' as const, justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #111', paddingBottom: '10px' },
-  title: { color: '#00ff41', margin: 0, fontSize: '1.2rem' },
-  burnoutMonitor: { color: '#888', fontSize: '0.8rem' },
+  leftColumn: { flex: '0 0 65%', padding: '10px' },
+  rightColumn: { 
+    flex: '0 0 35%', 
+    padding: '10px', 
+    borderLeft: '1px solid #222', 
+    background: 'rgba(255, 153, 0, 0.02)', // Subtle AWS Orange tint
+    borderRadius: '4px'
+  },
+  header: { display: 'flex' as const, justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #222', paddingBottom: '10px' },
+  title: { color: AWS_ORANGE, margin: 0, fontSize: '1.1rem', letterSpacing: '1px' },
+  burnoutMonitor: { color: '#666', fontSize: '0.75rem' },
   label: { marginRight: '5px' },
-  value: { color: '#00ff41', fontWeight: 'bold' as const },
+  value: { fontWeight: 'bold' as const },
   metricsRow: { display: 'grid' as const, gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px', marginBottom: '30px' },
-  metricCard: { background: 'rgba(0, 255, 65, 0.03)', border: '1px solid #111', padding: '20px', borderRadius: '4px' },
-  metricLabel: { fontSize: '0.7rem', color: '#666', marginBottom: '10px' },
-  metricValue: { fontSize: '1.8rem', color: '#00ff41', fontWeight: 'bold' as const },
-  progressBar: { width: '100%', height: '4px', background: '#0a0a0a', marginTop: '10px' },
-  progressFill: { height: '100%', background: '#00ff41', boxShadow: '0 0 10px #00ff41' },
+  metricCard: { background: 'rgba(255, 255, 255, 0.02)', border: '1px solid #222', padding: '20px', borderRadius: '4px' },
+  metricLabel: { fontSize: '0.7rem', color: '#888', marginBottom: '10px', letterSpacing: '1px' },
+  metricValue: { fontSize: '1.8rem', fontWeight: 'bold' as const },
+  progressBar: { width: '100%', height: '4px', background: '#111', marginTop: '10px' },
+  progressFill: { height: '100%', transition: 'width 1s ease-in-out' },
   footer: { fontSize: '0.6rem', color: '#444', marginTop: '10px' },
   domainGrid: { display: 'grid' as const, gridTemplateColumns: '1fr', gap: '10px' },
-  domainCard: { border: '1px solid #111', padding: '15px', display: 'flex' as const, justifyContent: 'space-between', alignItems: 'center', background: 'rgba(5, 5, 5, 0.5)' },
+  domainCard: { border: '1px solid #222', padding: '15px', display: 'flex' as const, justifyContent: 'space-between', alignItems: 'center', background: 'rgba(10, 10, 10, 0.8)' },
   domainInfo: { display: 'flex' as const, flexDirection: 'column' as const },
   domainNum: { fontSize: '0.6rem', color: '#444' },
-  domainName: { fontSize: '0.85rem', color: '#aaa', letterSpacing: '1px' },
+  domainName: { fontSize: '0.85rem', color: '#eee', letterSpacing: '1px' },
   weightLabel: { fontSize: '0.6rem', color: '#333', marginTop: '4px' },
-  status: { fontSize: '0.9rem', border: '1px solid', padding: '4px 10px', background: 'black' },
-  terminalHeader: { color: '#444', fontSize: '0.7rem', letterSpacing: '2px', marginBottom: '20px', borderBottom: '1px solid #222' },
-  terminalBody: { display: 'flex' as const, flexDirection: 'column' as const, gap: '15px' },
-  testButton: { background: 'transparent', color: '#00ff41', border: '1px solid #1a1a1a', padding: '15px', textAlign: 'left' as const, cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'monospace', transition: '0.3s' },
-  terminalFooter: { marginTop: '30px', color: '#222', fontSize: '0.7rem', lineHeight: '1.5' }
+  status: { fontSize: '0.8rem', border: '1px solid', padding: '4px 10px', background: 'rgba(0,0,0,0.5)' },
 };
 
 export default AWSSAPDashboard;

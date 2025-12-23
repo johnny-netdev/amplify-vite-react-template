@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { getUrl } from 'aws-amplify/storage';
-import type { Schema } from '../../amplify/data/resource';
-import VisualRenderer from './tactical_library/VisualRenderer';
+import type { Schema } from '../../../amplify/data/resource';
+import VisualRenderer from '../tactical_library/VisualRenderer';
 
 const client = generateClient<Schema>();
 

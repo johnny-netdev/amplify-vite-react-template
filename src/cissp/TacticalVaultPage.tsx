@@ -1,5 +1,5 @@
 // src/apps/cissp/TacticalVaultPage.tsx
-import TacticalVault from '../components/TacticalVault';
+import TacticalVault from '../components/vault/TacticalVault';
 import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from './constant';
 
 // 1. Define the interface for the props

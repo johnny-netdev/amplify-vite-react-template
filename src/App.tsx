@@ -9,7 +9,7 @@ import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-
 import CISSPApp from './apps/CISSPApp';
 import SecurityPlusApp from './apps/SecurityPlusApp';
 import AWSSAPApp from './apps/AWSSAPApp';
-import KanbanBoard from "./components/KanbanBoard";
+import KanbanBoard from "./components/kanban/KanbanBoard";
 
 function App() { 
   const { authStatus, user } = useAuthenticator((context) => [
@@ -21,18 +21,30 @@ function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 1. PERSISTENCE ENGINE: Initialize state from localStorage to prevent refresh resets
+  // Navigation Bridge State
+  const [targetDrillId, setTargetDrillId] = useState<string | null>(null);
+
   const [viewMode, setViewMode] = useState<'LOBBY' | 'STRATEGIC' | 'TACTICAL'>(() => {
     const saved = localStorage.getItem('vaultViewMode');
     return (saved as 'LOBBY' | 'STRATEGIC' | 'TACTICAL') || 'LOBBY';
   });
 
-  // 2. Sync viewMode to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('vaultViewMode', viewMode);
   }, [viewMode]);
 
-  // Sync profile logic
+  const handleLaunchDrill = (drillId: string, certPath?: string) => {
+  setTargetDrillId(drillId);
+  setViewMode('TACTICAL');
+  setShowTodos(false);
+  
+  // If the user isn't in a Vault, force them into one (defaulting to CISSP or the task's origin)
+  if (location.pathname === '/') {
+    navigate(certPath || '/CISSP'); 
+  }
+};
+
+  // Sync profile logic (unchanged)
   useEffect(() => {
     if (authStatus === 'authenticated' && user) {
       const checkForProfile = async () => {
@@ -40,17 +52,12 @@ function App() {
           const { data: profiles } = await client.models.UserProfile.list({
             filter: { userId: { eq: user.userId } }
           });
-
           if (profiles.length === 0) {
             await client.models.UserProfile.create({
-              userId: user.userId,
-              username: user.username,
-              bio: "This is a default bio.",
+              userId: user.userId, username: user.username, bio: "This is a default bio.",
             });
           }
-        } catch (error) {
-          console.error('Error checking/creating user profile:', error);
-        }
+        } catch (error) { console.error(error); }
       };
       checkForProfile();
     }
@@ -69,7 +76,7 @@ function App() {
           <div
             key={cert.id}
             onClick={() => {
-              setViewMode('STRATEGIC'); // Default to Strategic Dashboard on entry
+              setViewMode('STRATEGIC');
               navigate(cert.path);      
             }}
             style={styles.certTile}
@@ -85,19 +92,16 @@ function App() {
   
   return (
     <div style={{ position: 'relative', minHeight: '100vh', backgroundColor: '#000' }}>
-      {/* 1. GLOBAL HEADER */}
       {authStatus === 'authenticated' && (
         <Header 
           onToggleTodos={() => setShowTodos(!showTodos)} 
           showTodos={showTodos}
-          // Simple context check: if on root, it's Lobby, otherwise it's a Vault
           context={location.pathname === '/' ? 'LOBBY' : 'VAULT'}
           viewMode={viewMode}
           setViewMode={setViewMode}
         />
       )}
 
-      {/* 2. THE VIEWPORT */}
       <main style={{ position: 'relative', zIndex: 1 }}>
         <Routes>
           <Route
@@ -117,18 +121,45 @@ function App() {
             }
           />
 
-          {/* VAULT ROUTES: Passing viewMode and setViewMode to all apps */}
-          <Route path="/securityplus" element={<SecurityPlusApp viewMode={viewMode} setViewMode={setViewMode} />} />
-          <Route path="/CISSP" element={<CISSPApp viewMode={viewMode} setViewMode={setViewMode} />} />
-          <Route path="/awssap" element={<AWSSAPApp viewMode={viewMode} setViewMode={setViewMode} />} />
+          {/* Pass targetDrillId and clear function to apps */}
+          <Route path="/securityplus" element={
+            <SecurityPlusApp 
+              viewMode={viewMode} 
+              setViewMode={setViewMode} 
+              preLoadedDrillId={targetDrillId}
+              onDrillStarted={() => setTargetDrillId(null)} 
+            />
+          } />
+          
+          <Route path="/CISSP" element={
+            <CISSPApp 
+              viewMode={viewMode} 
+              setViewMode={setViewMode} 
+              preLoadedDrillId={targetDrillId}
+              onDrillStarted={() => setTargetDrillId(null)}
+            />
+          } />
+          
+          <Route path="/awssap" element={
+            <AWSSAPApp 
+              viewMode={viewMode} 
+              setViewMode={setViewMode} 
+              preLoadedDrillId={targetDrillId}
+              onDrillStarted={() => setTargetDrillId(null)}
+            />
+          } />
           
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
 
         {showTodos && (
           <div style={styles.kanbanOverlay} onClick={() => setShowTodos(false)}>
-            <div onClick={(e) => e.stopPropagation()}>
-              <KanbanBoard />
+            {/* Use a container with a max-height to allow scrolling within the Kanban board if tasks grow */}
+            <div 
+              onClick={(e) => e.stopPropagation()} 
+              style={{ width: '95%', maxWidth: '1400px', maxHeight: '90vh', overflowY: 'auto' }}
+            >
+              <KanbanBoard onLaunchDrill={handleLaunchDrill} />
             </div>
           </div>
         )}

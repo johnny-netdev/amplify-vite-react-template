@@ -8,12 +8,12 @@ export const AWS_SAP_RAW_DATA: DomainData[] = [
   { id: 'SAP_D4', name: 'Migration & Modernization', weight: 0.20, userScore: 0.92 },
 ];
 
-export const AWS_COLORS: Record<string, string> = {
-  'SAP_D1': '#ff9900', // AWS Orange
-  'SAP_D2': '#00ff41',
-  'SAP_D3': '#357ae8',
-  'SAP_D4': '#ff4b2b',
-};
+const domains = ['SAP_D1', 'SAP_D2', 'SAP_D3', 'SAP_D4'];
+const AWS_ORANGE = '#ff9900';
+
+export const AWS_COLORS: Record<string, string> = Object.fromEntries(
+  domains.map(id => [id, AWS_ORANGE])
+);
 
 export const AWS_TERMINAL = {
   buttonBorder: '#ff9900', // AWS Orange

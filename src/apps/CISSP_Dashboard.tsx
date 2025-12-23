@@ -1,7 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { client } from '../amplify-client'; 
 import type { Schema } from '../../amplify/data/resource';
-import { CISSP_DOMAIN_MAP, DOMAIN_COLORS, CISSP_TERMINAL } from '../cissp/constant';
+import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
+import ActionTerminal from '../components/terminal/ActionTerminal'; // 🔥 Import the engine
+
 const DOMAIN_WEIGHTS: Record<string, number> = {
   RISK_MGMT: 0.15, 
   ASSET_SEC: 0.10, 
@@ -13,7 +15,13 @@ const DOMAIN_WEIGHTS: Record<string, number> = {
   SOFTWARE_DEV_SEC: 0.11
 };
 
-const CISSPDashboard: React.FC = () => {
+// 🔥 Accept props for the Bridge
+interface DashboardProps {
+  preLoadedDrillId?: string | null;
+  onDrillStarted?: () => void;
+}
+
+const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillStarted }) => {
   const [activities, setActivities] = useState<Schema['UserActivity']['type'][]>([]);
 
   useEffect(() => {
@@ -26,14 +34,10 @@ const CISSPDashboard: React.FC = () => {
   const stats = useMemo(() => {
     const domainScores: Record<string, number[]> = {};
     let totalDuration = 0;
-    
     Object.keys(DOMAIN_WEIGHTS).forEach(d => domainScores[d] = []);
 
     activities.forEach(act => {
-      // ⭐️ Sanitization: Matches incoming DB strings to our Constant Keys
       const sanitizedKey = act.domain.toUpperCase().replace(/\s/g, '_');
-      
-      // Handle the specific naming variations from DB to Constant
       let targetKey = sanitizedKey;
       if (sanitizedKey === 'SEC_ASSESS') targetKey = 'SEC_ASSESS_TEST';
       if (sanitizedKey === 'SOFT_DEV_SEC') targetKey = 'SOFTWARE_DEV_SEC';
@@ -52,7 +56,6 @@ const CISSPDashboard: React.FC = () => {
       const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
       weightedReadiness += avg * (DOMAIN_WEIGHTS[domainKey]); 
 
-      // ⭐️ Lookup full name from constant.ts
       const fullName = CISSP_DOMAIN_MAP[domainKey as keyof typeof CISSP_DOMAIN_MAP];
       const displayLabel = fullName || domainKey.replace(/_/g, ' ');
 
@@ -121,36 +124,12 @@ const CISSPDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* 🔥 RIGHT COLUMN: ACTION TERMINAL INTEGRATION */}
       <div style={styles.rightColumn}>
-        <div style={styles.terminalHeader}>ACTION_TERMINAL</div>
-        <div style={styles.terminalBody}>
-          {['RUN_CAT_EXAM_SIM', 'DOMAIN_DRILL_OVERRIDE', 'WEAK_POINT_SCAN', 'BCP_DRP_SCENARIOS'].map((action) => (
-            <button 
-              key={action}
-              style={{
-                ...styles.testButton, 
-                color: CISSP_TERMINAL.buttonText,
-                borderColor: '#1a1a1a'
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = CISSP_TERMINAL.buttonBorder;
-                e.currentTarget.style.backgroundColor = CISSP_TERMINAL.buttonHoverBg;
-                e.currentTarget.style.color = CISSP_TERMINAL.buttonText;
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = '#1a1a1a';
-                e.currentTarget.style.backgroundColor = 'transparent';
-                e.currentTarget.style.color = '#00ff41';
-              }}
-            >
-              [ {action} ]
-            </button>
-          ))}
-          <div style={styles.terminalFooter}>
-            SYSTEM_STATUS: ACTIVE<br />
-            AWAITING_CRITICAL_INPUT...
-          </div>
-        </div>
+        <ActionTerminal 
+           preLoadedDrillId={preLoadedDrillId} 
+           onDrillStarted={onDrillStarted}
+        />
       </div>
     </div>
   );
@@ -158,8 +137,14 @@ const CISSPDashboard: React.FC = () => {
 
 const styles = {
   dashboardWrapper: { display: 'flex' as const, gap: '20px', width: '100%', fontFamily: 'monospace' },
-  leftColumn: { flex: '0 0 70%', padding: '10px' },
-  rightColumn: { flex: '0 0 30%', padding: '10px', borderLeft: '1px solid #333', background: 'rgba(35, 77, 229, 0.05)' },
+  leftColumn: { flex: '0 0 65%', padding: '10px' }, // Adjusted width to fit terminal
+  rightColumn: { 
+    flex: '0 0 35%', 
+    padding: '10px', 
+    borderLeft: '1px solid #222', 
+    background: 'rgba(5, 5, 5, 0.4)',
+    borderRadius: '8px'
+  },
   header: { display: 'flex' as const, justifyContent: 'space-between', marginBottom: '20px', borderBottom: '1px solid #333', paddingBottom: '10px' },
   title: { color: '#00ff41', margin: 0, fontSize: '1.2rem' },
   burnoutMonitor: { color: '#888', fontSize: '0.8rem' },
@@ -178,10 +163,6 @@ const styles = {
   domainNum: { fontSize: '0.6rem', color: '#444' },
   domainName: { fontSize: '0.85rem', color: '#aaa', letterSpacing: '1px' },
   status: { fontSize: '0.7rem', border: '1px solid', padding: '4px 10px', whiteSpace: 'nowrap' as const },
-  terminalHeader: { color: '#444', fontSize: '0.7rem', letterSpacing: '2px', marginBottom: '20px', borderBottom: '1px solid #222', paddingBottom: '5px' },
-  terminalBody: { display: 'flex' as const, flexDirection: 'column' as const, gap: '15px' },
-  testButton: { background: 'transparent', border: '1px solid', padding: '15px', textAlign: 'left' as const, cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'monospace', transition: 'all 0.2s ease' },
-  terminalFooter: { marginTop: '30px', color: '#333', fontSize: '0.7rem' }
 };
 
 export default CISSPDashboard;
