@@ -20,8 +20,8 @@ function App() {
   const [showTodos, setShowTodos] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const [isLoadingModule, setIsLoadingModule] = useState(false);
 
-  // Navigation Bridge State
   const [targetDrillId, setTargetDrillId] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<'LOBBY' | 'STRATEGIC' | 'TACTICAL'>(() => {
@@ -34,28 +34,23 @@ function App() {
   }, [viewMode]);
 
   const handleLaunchDrill = (drillId: string, certPath?: string) => {
-    // 1. Store the drill ID in state so the specific App (CISSP/AWS) can pick it up
-    setTargetDrillId(drillId);
+    setIsLoadingModule(true);
+    setShowTodos(false); 
 
-    // 2. Set viewMode to 'TACTICAL' (assuming tactical is your drill/quiz view)
-    setViewMode('TACTICAL');
+    setTimeout(() => {
+      setTargetDrillId(drillId);
+      setViewMode('TACTICAL');
 
-    // 3. If a certPath is provided (e.g., 'awssap'), navigate to that route
-    if (certPath) {
-      // We force lowercase and add leading slash to match your Route paths
-      const formattedPath = certPath.startsWith('/') ? certPath : `/${certPath.toLowerCase()}`;
+      if (certPath) {
+        const formattedPath = certPath.startsWith('/') ? certPath : `/${certPath.toLowerCase()}`;
+        const finalPath = formattedPath === '/cissp' ? '/CISSP' : formattedPath;
+        navigate(finalPath);
+      }
       
-      // Check for your specific casing on CISSP
-      const finalPath = formattedPath === '/cissp' ? '/CISSP' : formattedPath;
-      
-      navigate(finalPath);
-    }
-
-    // 4. Close the Kanban overlay so the user can see the drill
-    setShowTodos(false);
+      setIsLoadingModule(false);
+    }, 1500); 
   };
 
-  // Sync profile logic (unchanged)
   useEffect(() => {
     if (authStatus === 'authenticated' && user) {
       const checkForProfile = async () => {
@@ -115,9 +110,7 @@ function App() {
 
       <main style={{ position: 'relative', zIndex: 1 }}>
         <Routes>
-          <Route
-            path="/"
-            element={
+          <Route path="/" element={
               authStatus === 'authenticated' ? (
                 <>
                   <MatrixRain /> 
@@ -126,116 +119,83 @@ function App() {
                     {renderCertButtons()} 
                   </div>
                 </>
-              ) : (
-                <Authenticator />
-              )
+              ) : ( <Authenticator /> )
             }
           />
-
-          {/* Pass targetDrillId and clear function to apps */}
           <Route path="/securityplus" element={
-            <SecurityPlusApp 
-              viewMode={viewMode} 
-              setViewMode={setViewMode} 
-              preLoadedDrillId={targetDrillId}
-              onDrillStarted={() => setTargetDrillId(null)} 
-            />
+            <SecurityPlusApp viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
           } />
-          
           <Route path="/CISSP" element={
-            <CISSPApp 
-              viewMode={viewMode} 
-              setViewMode={setViewMode} 
-              preLoadedDrillId={targetDrillId}
-              onDrillStarted={() => setTargetDrillId(null)}
-            />
+            <CISSPApp viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
           } />
-          
           <Route path="/awssap" element={
-            <AWSSAPApp 
-              viewMode={viewMode} 
-              setViewMode={setViewMode} 
-              preLoadedDrillId={targetDrillId}
-              onDrillStarted={() => setTargetDrillId(null)}
-            />
+            <AWSSAPApp viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
           } />
-          
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
 
         {showTodos && (
           <div style={styles.kanbanOverlay} onClick={() => setShowTodos(false)}>
-            {/* Use a container with a max-height to allow scrolling within the Kanban board if tasks grow */}
-            <div 
-              onClick={(e) => e.stopPropagation()} 
-              style={{ width: '95%', maxWidth: '1400px', maxHeight: '90vh', overflowY: 'auto' }}
-            >
+            <div onClick={(e) => e.stopPropagation()} style={{ width: '95%', maxWidth: '1400px', maxHeight: '90vh', overflowY: 'auto' }}>
               <KanbanBoard onLaunchDrill={handleLaunchDrill} />
             </div>
           </div>
         )}
       </main>
+
+      {/* 🟢 SYSTEM LOADING OVERLAY */}
+      {isLoadingModule && (
+        <div style={styles.loaderOverlay}>
+          <div style={styles.loaderContent}>
+            <div className="glitch-text" style={styles.loaderText}>
+              [ LOADING MODULES ]
+            </div>
+            <div style={styles.loaderBarContainer}>
+              <div className="loading-bar-fill"></div>
+            </div>
+            <div style={styles.systemStatus}>
+              SYSTEM_ACCESS: GRANTED...<br/>
+              ENCRYPT_TUNNEL: ACTIVE...<br/>
+              FETCHING_DATA: {targetDrillId || 'CORE_LOAD'}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 const styles = {
-  lobbyContainer: {
-    display: 'flex', 
-    flexDirection: 'column' as const, 
-    alignItems: 'center', 
-    justifyContent: 'center', 
-    minHeight: '100vh',
-    position: 'relative',
-    zIndex: 2
-  },
-  lobbyTitle: {
-    color: '#00ff41',
-    letterSpacing: '5px',
-    marginBottom: '2rem',
-    textShadow: '0 0 10px #00ff41',
-    fontFamily: 'monospace'
-  },
-  certGrid: {
-    background: 'rgba(255, 255, 255, 0.05)',
-    backdropFilter: 'blur(10px)',
-    WebkitBackdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255, 255, 255, 0.1)',
-    borderRadius: '20px',
-    padding: '40px',
-    display: 'flex',
-    gap: '30px',
-    boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.8)'
-  },
-  certTile: {
-    background: 'rgba(0, 255, 65, 0.1)',
-    border: '1px solid #00ff41',
-    color: '#00ff41',
-    padding: '20px 40px',
-    fontSize: '1.2rem',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    borderRadius: '8px',
-    transition: '0.3s',
-    letterSpacing: '2px',
-    fontFamily: 'monospace',
-    textAlign: 'center' as const
-  },
+  // ... (keeping your previous styles)
+  lobbyContainer: { display: 'flex', flexDirection: 'column' as const, alignItems: 'center', justifyContent: 'center', minHeight: '100vh', position: 'relative', zIndex: 2 },
+  lobbyTitle: { color: '#00ff41', letterSpacing: '5px', marginBottom: '2rem', textShadow: '0 0 10px #00ff41', fontFamily: 'monospace' },
+  certGrid: { background: 'rgba(255, 255, 255, 0.05)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255, 255, 255, 0.1)', borderRadius: '20px', padding: '40px', display: 'flex', gap: '30px', boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.8)' },
+  certTile: { background: 'rgba(0, 255, 65, 0.1)', border: '1px solid #00ff41', color: '#00ff41', padding: '20px 40px', fontSize: '1.2rem', fontWeight: 'bold', cursor: 'pointer', borderRadius: '8px', transition: '0.3s', letterSpacing: '2px', fontFamily: 'monospace', textAlign: 'center' as const },
   tileHeader: { fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '5px' },
   tileDesc: { fontSize: '0.8rem', opacity: 0.7, marginBottom: '10px' },
   tileFooter: { fontSize: '0.7rem', borderTop: '1px solid rgba(0, 255, 65, 0.3)', paddingTop: '10px', marginTop: 'auto' },
-  kanbanOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100vw',
-    height: '100vh',
-    zIndex: 100,
-    background: 'rgba(0,0,0,0.85)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center'
-  }
+  kanbanOverlay: { position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 100, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  
+  // 🟢 Fixed Loader Styles
+  loaderOverlay: {
+    position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
+    background: '#000', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center',
+    fontFamily: 'monospace'
+  },
+  loaderContent: { 
+    textAlign: 'center' as const, 
+    width: 'fit-content', // 🟢 Ensures container fits the text
+    minWidth: '300px' 
+  },
+  loaderText: { 
+    color: '#00ff41', 
+    fontSize: '1.6rem', 
+    marginBottom: '20px', 
+    letterSpacing: '3px',
+    whiteSpace: 'nowrap' as const // 🟢 Critical fix for the wrapping issue
+  },
+  loaderBarContainer: { width: '100%', height: '2px', background: '#111', borderRadius: '2px', overflow: 'hidden', border: '1px solid #003300' },
+  systemStatus: { color: '#003300', fontSize: '0.7rem', marginTop: '15px', textAlign: 'left' as const, lineHeight: '1.5', fontFamily: 'monospace' }
 } as const;
 
 export default App;
