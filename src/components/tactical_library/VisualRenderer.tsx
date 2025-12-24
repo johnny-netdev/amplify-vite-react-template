@@ -31,7 +31,12 @@ const VisualRenderer: React.FC<VisualRendererProps> = ({ type, content, accentCo
 
       <div style={{ flex: 1, overflow: 'hidden' }}>
         {/* Case 1: Quiz */}
-        {type === 'QUIZ' && content && <TacticalQuiz data={content} accent={accentColor} />}
+        {type === 'QUIZ' && content && 
+          <TacticalQuiz 
+            data={content} 
+            accent={accentColor}
+            onComplete={(score) => console.log(`VisualRenderer: Quiz finished with ${score}%`)}
+          />}
         
         {/* Case 2: Diagram */}
         {type === 'DIAGRAM' && content && <TacticalInfographic data={content} accent={accentColor} />}
