@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
+import { CERT_REGISTRY } from '../../utils/certRegistry'; // 🟢 Added import
 
 const client = generateClient<Schema>();
 
-// 🟢 STEP 1: Define the Interface to accept the function from App.tsx
 interface KanbanBoardProps {
   onLaunchDrill: (drillId: string, certPath?: string) => void;
 }
@@ -16,7 +16,6 @@ const lanes = [
   { key: 'COMPLETED', label: 'Complete' },
 ];
 
-// 🟢 STEP 2: Pass the props into the component
 const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
   const [tasks, setTasks] = useState<Array<Schema['Task']['type']>>([]);
   const [newTask, setNewTask] = useState('');
@@ -80,10 +79,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
     }
   };
 
-  // 🟢 STEP 3: Replace alert with the actual function from App.tsx
   const handleLaunchRemediation = (drillId: string | null | undefined) => {
     if (!drillId) return;
-    // This sends the signal back to App.tsx to switch views and load the drill
     onLaunchDrill(drillId); 
   };
 
@@ -118,6 +115,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
               .map(task => {
                 const isRemediation = task.title?.includes('REMEDIATE');
                 
+                // 🟢 MATCHING REGISTRY FOR COLORS/LABELS
+                // This checks task.certID (which you're now sending via the emitter)
+                const certConfig = Object.values(CERT_REGISTRY).find(c => c.id === task.certID) 
+                   || (task.title?.includes('AWS') ? CERT_REGISTRY.awssap : CERT_REGISTRY.cissp);
+
                 return (
                   <div
                     key={task.id}
@@ -125,24 +127,30 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
                     onDragStart={() => setDraggedTaskId(task.id)}
                     style={{
                       ...s.card,
-                      borderLeft: isRemediation ? '4px solid #ff4b2b' : '1px solid #333',
+                      // Use cert-specific color for the border
+                      borderLeft: isRemediation ? `4px solid ${certConfig.color}` : '1px solid #333',
                       opacity: draggedTaskId === task.id ? 0.4 : 1,
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
+                        {/* 🟢 CERT BADGE */}
+                        <div style={{ ...s.certBadge, color: certConfig.color, borderColor: certConfig.color + '44' }}>
+                          {certConfig.name}
+                        </div>
+
                         <span style={s.cardTitle}>{task.title}</span>
                         
-                        {/* THE REINFORCEMENT UI */}
                         {isRemediation && (
                           <div style={s.remediationInfo}>
                             <div style={s.scoreContainer}>
-                              <div style={{ ...s.scoreBar, width: `${task.score || 0}%` }} />
+                              {/* 🟢 Score bar matches cert color */}
+                              <div style={{ ...s.scoreBar, width: `${task.score || 0}%`, background: certConfig.color }} />
                             </div>
                             <span style={s.scoreText}>SCORE: {task.score}%</span>
                             <button 
                               onClick={() => handleLaunchRemediation(task.drillId)}
-                              style={s.launchBtn}
+                              style={{ ...s.launchBtn, color: certConfig.color, borderColor: certConfig.color }}
                             >
                               INITIALIZE_REMEDIATION
                             </button>
@@ -153,7 +161,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
                       <span 
                         onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} 
                         style={s.deleteBtn}
-                      >×</span>
+                      >❌</span>
                     </div>
                   </div>
                 );
@@ -172,12 +180,13 @@ const s = {
   addBtn: { width: '100%', padding: '8px', background: '#00ff41', color: '#000', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 'bold' as const },
   card: { background: '#1a1a1a', color: '#ccc', marginBottom: 10, padding: 12, borderRadius: 4, cursor: 'grab' as const, transition: '0.2s' },
   cardTitle: { fontFamily: 'monospace', fontSize: '0.85rem', display: 'block', marginBottom: '8px' },
-  deleteBtn: { cursor: 'pointer', color: '#ff4b2b', fontSize: '1.2rem', paddingLeft: '8px' },
-  remediationInfo: { marginTop: '10px', padding: '8px', background: 'rgba(255, 75, 43, 0.05)', borderRadius: '4px' },
+  certBadge: { fontSize: '0.5rem', fontFamily: 'monospace', border: '1px solid', padding: '1px 4px', borderRadius: '3px', display: 'inline-block', marginBottom: '6px', background: 'rgba(255,255,255,0.02)' },
+  deleteBtn: { cursor: 'pointer', color: '#444', fontSize: '1.2rem', paddingLeft: '8px' },
+  remediationInfo: { marginTop: '10px', padding: '8px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '4px' },
   scoreContainer: { height: '4px', background: '#333', width: '100%', borderRadius: '2px', marginBottom: '4px' },
-  scoreBar: { height: '100%', background: '#ff4b2b', borderRadius: '2px' },
+  scoreBar: { height: '100%', borderRadius: '2px' },
   scoreText: { fontSize: '0.65rem', color: '#888', display: 'block', marginBottom: '8px' },
-  launchBtn: { width: '100%', background: 'transparent', border: '1px solid #00ff41', color: '#00ff41', fontSize: '0.65rem', padding: '4px', cursor: 'pointer', fontFamily: 'monospace' }
+  launchBtn: { width: '100%', background: 'transparent', border: '1px solid', fontSize: '0.65rem', padding: '4px', cursor: 'pointer', fontFamily: 'monospace' }
 };
 
 export default KanbanBoard;

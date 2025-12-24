@@ -63,7 +63,8 @@ const schema = a.schema({
   Task: a.model({
     title: a.string().required(),
     status: a.enum(['TODO', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED']),
-    score: a.integer(),         // Percentage score if applicable
+    score: a.integer(),
+    certID: a.string(),      // The specific certification ID (e.g., "CISSP", "SEC_PLUS")
 
     // NEW INTELLIGENCE FIELDS
     origin: a.enum(['QUIZ_FAILURE', 'TERMINAL_DIAGNOSTIC', 'MANUAL', 'DECAY_RECOVERY']),

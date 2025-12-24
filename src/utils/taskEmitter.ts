@@ -7,7 +7,8 @@ export const emitRemediationTask = async (
   topic: string,
   score: number,
   domain: string,
-  drillId: string
+  drillId: string,
+  cert: string
 ) => {
   // Only emit a task if the user falls below the mastery threshold (e.g., 80%)
   if (score >= 80) return null;
@@ -19,6 +20,7 @@ export const emitRemediationTask = async (
       origin: 'QUIZ_FAILURE',
       domain: domain,
       drillId: drillId,
+      certID: cert,
       priority: score < 50 ? 10 : 5, // 10 is Critical, 5 is High
       metadata: JSON.stringify({
         lastAttemptScore: score,
