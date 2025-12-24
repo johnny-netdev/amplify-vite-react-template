@@ -57,13 +57,12 @@ const ActionTerminal: React.FC<TerminalProps> = ({ preLoadedDrillId, onDrillStar
             client.models.Task.update({ id: task.id, status: 'COMPLETED' })
           ));
         } else {
-          // Uses config.id (e.g., "AWS_SAP") for the emitter
           emitRemediationTask(
-            drillId, 
-            score, 
-            selectedSubDomain || activeMission?.domain || "General", 
-            "PROT_v1", // 🟢 Placeholder for the 4th argument (check taskEmitter.ts for what this actually is!)
-            config.id  
+            activeMission?.label || "Diagnostic", // 1. topic
+            score,                                // 2. score
+            selectedSubDomain || "General",       // 3. domain
+            drillId,                              // 4. drillId
+            config.id                             // 5. cert (config.id is 'AWS_SAP', etc.)
           );
         }
         setActiveMission(null);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../../amplify/data/resource';
-import { CERT_REGISTRY } from '../../utils/certRegistry'; // 🟢 Added import
+import { CERT_REGISTRY } from '../../utils/certRegistry'; 
 
 const client = generateClient<Schema>();
 
@@ -9,7 +9,14 @@ interface KanbanBoardProps {
   onLaunchDrill: (drillId: string, certPath?: string) => void;
 }
 
-const lanes = [
+type TaskStatus = "TODO" | "IN_PROGRESS" | "BLOCKED" | "COMPLETED";
+
+interface Lane {
+  key: TaskStatus;
+  label: string;
+}
+
+const lanes: Lane[] = [
   { key: 'TODO', label: 'TODO' },
   { key: 'IN_PROGRESS', label: 'In-progress' },
   { key: 'BLOCKED', label: 'Blocked' },
@@ -20,28 +27,45 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
   const [tasks, setTasks] = useState<Array<Schema['Task']['type']>>([]);
   const [newTask, setNewTask] = useState('');
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [pendingDeletes, setPendingDeletes] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const fetchInitialTasks = async () => {
       try {
         const { data } = await client.models.Task.list({ authMode: 'userPool' });
         setTasks([...data]);
-      } catch (err) {
-        console.error("Manual fetch failed:", err);
-      }
+      } catch (err) { console.error("Manual fetch failed:", err); }
     };
-
     fetchInitialTasks();
 
-    const sub = client.models.Task.observeQuery({
-      authMode: 'userPool'
-    } as any).subscribe({
+    const sub = client.models.Task.observeQuery({ authMode: 'userPool' } as any).subscribe({
       next: ({ items }) => setTasks([...items]),
       error: (err) => console.warn("Live sync issue:", err)
     });
-
     return () => sub.unsubscribe();
   }, []);
+
+  // 🟢 Graceful Purge Timer Logic
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPendingDeletes(prev => {
+        const updated = { ...prev };
+        let changed = false;
+        Object.keys(updated).forEach(id => {
+          if (updated[id] <= 1) {
+            handleDelete(id); 
+            delete updated[id];
+            changed = true;
+          } else {
+            updated[id] -= 1;
+            changed = true;
+          }
+        });
+        return changed ? updated : prev;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [tasks]);
 
   const handleAddTask = async () => {
     if (!newTask.trim()) return;
@@ -57,12 +81,27 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
     } catch (err) { console.error(err); }
   };
 
-  const handleDrop = async (newStatus: any) => {
+  const handleDrop = async (newStatus: string) => {
     if (!draggedTaskId) return;
+
+    if (newStatus === 'COMPLETED') {
+      setPendingDeletes(prev => ({ ...prev, [draggedTaskId]: 300 })); // set timer countdown here in seconds
+    } else {
+      setPendingDeletes(prev => {
+        const updated = { ...prev };
+        delete updated[draggedTaskId];
+        return updated;
+      });
+    }
+
     const previousTasks = [...tasks];
-    setTasks(prev => prev.map(t => t.id === draggedTaskId ? { ...t, status: newStatus } : t));
+    setTasks(prev => prev.map(t => t.id === draggedTaskId ? { ...t, status: newStatus as any } : t));
+
     try {
-      await client.models.Task.update({ id: draggedTaskId, status: newStatus }, { authMode: 'userPool' });
+      await client.models.Task.update({ 
+        id: draggedTaskId, 
+        status: newStatus as any
+      }, { authMode: 'userPool' });
     } catch (err) {
       setTasks(previousTasks);
     }
@@ -79,9 +118,30 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
     }
   };
 
-  const handleLaunchRemediation = (drillId: string | null | undefined) => {
-    if (!drillId) return;
-    onLaunchDrill(drillId); 
+  // 🟢 NEW: Nuclear Purge for Completed Lane
+  const handlePurgeAllCompleted = async () => {
+    const completedTasks = tasks.filter(t => t.status === 'COMPLETED');
+    if (completedTasks.length === 0) return;
+
+    if (window.confirm(`PERMANENTLY PURGE ${completedTasks.length} COMPLETED TASKS?`)) {
+      const previousTasks = [...tasks];
+      setTasks(prev => prev.filter(t => t.status !== 'COMPLETED'));
+      setPendingDeletes({});
+
+      try {
+        await Promise.all(completedTasks.map(t => client.models.Task.delete({ id: t.id }, { authMode: 'userPool' })));
+      } catch (err) {
+        console.error("Bulk purge failed:", err);
+        setTasks(previousTasks);
+      }
+    }
+  };
+
+  const handleLaunchRemediation = (task: Schema['Task']['type']) => {
+    if (!task.drillId) return;
+    const certEntry = Object.entries(CERT_REGISTRY).find(([_, config]) => config.id === task.certID);
+    const targetPath = certEntry ? certEntry[0] : 'cissp';
+    onLaunchDrill(task.drillId, targetPath); 
   };
 
   return (
@@ -93,7 +153,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
           onDrop={() => handleDrop(lane.key)}
           style={s.lane}
         >
-          <h3 style={s.laneHeader}>{lane.label}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottom: '1px solid #222', paddingBottom: 8 }}>
+            <h3 style={s.laneHeader}>{lane.label}</h3>
+            {/* 🟢 PURGE BUTTON */}
+            {lane.key === 'COMPLETED' && tasks.some(t => t.status === 'COMPLETED') && (
+              <button onClick={handlePurgeAllCompleted} style={s.purgeAllBtn}>[ DELETE ALL ]</button>
+            )}
+          </div>
           
           {lane.key === 'TODO' && (
             <div style={{ marginBottom: 16 }}>
@@ -114,9 +180,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
               .filter(t => t.status === lane.key)
               .map(task => {
                 const isRemediation = task.title?.includes('REMEDIATE');
+                const isPending = pendingDeletes[task.id];
                 
-                // 🟢 MATCHING REGISTRY FOR COLORS/LABELS
-                // This checks task.certID (which you're now sending via the emitter)
                 const certConfig = Object.values(CERT_REGISTRY).find(c => c.id === task.certID) 
                    || (task.title?.includes('AWS') ? CERT_REGISTRY.awssap : CERT_REGISTRY.cissp);
 
@@ -127,14 +192,12 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
                     onDragStart={() => setDraggedTaskId(task.id)}
                     style={{
                       ...s.card,
-                      // Use cert-specific color for the border
                       borderLeft: isRemediation ? `4px solid ${certConfig.color}` : '1px solid #333',
-                      opacity: draggedTaskId === task.id ? 0.4 : 1,
+                      opacity: isPending ? 0.6 : (draggedTaskId === task.id ? 0.4 : 1),
                     }}
                   >
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
-                        {/* 🟢 CERT BADGE */}
                         <div style={{ ...s.certBadge, color: certConfig.color, borderColor: certConfig.color + '44' }}>
                           {certConfig.name}
                         </div>
@@ -144,16 +207,18 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
                         {isRemediation && (
                           <div style={s.remediationInfo}>
                             <div style={s.scoreContainer}>
-                              {/* 🟢 Score bar matches cert color */}
                               <div style={{ ...s.scoreBar, width: `${task.score || 0}%`, background: certConfig.color }} />
                             </div>
                             <span style={s.scoreText}>SCORE: {task.score}%</span>
                             <button 
-                              onClick={() => handleLaunchRemediation(task.drillId)}
+                              onClick={() => handleLaunchRemediation(task)}
                               style={{ ...s.launchBtn, color: certConfig.color, borderColor: certConfig.color }}
                             >
                               INITIALIZE_REMEDIATION
                             </button>
+                            {isPending && (
+                              <div style={s.timerLabel}>AUTO-PURGE IN {pendingDeletes[task.id]}s</div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -161,7 +226,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
                       <span 
                         onClick={(e) => { e.stopPropagation(); handleDelete(task.id); }} 
                         style={s.deleteBtn}
-                      >❌</span>
+                      >x</span>
                     </div>
                   </div>
                 );
@@ -175,17 +240,19 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
 
 const s = {
   lane: { flex: 1, minWidth: 280, background: '#111', borderRadius: 6, padding: 12, border: '1px solid #222', minHeight: '500px' },
-  laneHeader: { color: '#00ff41', fontSize: '0.75rem', fontFamily: 'monospace', borderBottom: '1px solid #222', paddingBottom: 8, letterSpacing: '2px' },
+  laneHeader: { color: '#00ff41', fontSize: '0.75rem', fontFamily: 'monospace', letterSpacing: '2px', margin: 0 },
+  purgeAllBtn: { background: 'transparent', border: 'none', color: '#ff4b2b', fontSize: '0.6rem', fontFamily: 'monospace', cursor: 'pointer', fontWeight: 'bold' as const },
   input: { width: '100%', padding: '10px', background: '#000', color: '#00ff41', border: '1px solid #00ff41', marginBottom: '6px', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' as const },
   addBtn: { width: '100%', padding: '8px', background: '#00ff41', color: '#000', border: 'none', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 'bold' as const },
   card: { background: '#1a1a1a', color: '#ccc', marginBottom: 10, padding: 12, borderRadius: 4, cursor: 'grab' as const, transition: '0.2s' },
   cardTitle: { fontFamily: 'monospace', fontSize: '0.85rem', display: 'block', marginBottom: '8px' },
   certBadge: { fontSize: '0.5rem', fontFamily: 'monospace', border: '1px solid', padding: '1px 4px', borderRadius: '3px', display: 'inline-block', marginBottom: '6px', background: 'rgba(255,255,255,0.02)' },
-  deleteBtn: { cursor: 'pointer', color: '#444', fontSize: '1.2rem', paddingLeft: '8px' },
+  deleteBtn: { cursor: 'pointer', color: '#ff4b2b', fontSize: '1.4rem', paddingLeft: '8px', fontWeight: 'bold' as const, lineHeight: '1' },
   remediationInfo: { marginTop: '10px', padding: '8px', background: 'rgba(255, 255, 255, 0.02)', borderRadius: '4px' },
   scoreContainer: { height: '4px', background: '#333', width: '100%', borderRadius: '2px', marginBottom: '4px' },
   scoreBar: { height: '100%', borderRadius: '2px' },
   scoreText: { fontSize: '0.65rem', color: '#888', display: 'block', marginBottom: '8px' },
+  timerLabel: { color: '#ff4b2b', fontSize: '0.6rem', marginTop: '8px', textAlign: 'center' as const, fontFamily: 'monospace', fontWeight: 'bold' as const },
   launchBtn: { width: '100%', background: 'transparent', border: '1px solid', fontSize: '0.65rem', padding: '4px', cursor: 'pointer', fontFamily: 'monospace' }
 };
 

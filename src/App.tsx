@@ -34,15 +34,26 @@ function App() {
   }, [viewMode]);
 
   const handleLaunchDrill = (drillId: string, certPath?: string) => {
-  setTargetDrillId(drillId);
-  setViewMode('TACTICAL');
-  setShowTodos(false);
-  
-  // If the user isn't in a Vault, force them into one (defaulting to CISSP or the task's origin)
-  if (location.pathname === '/') {
-    navigate(certPath || '/CISSP'); 
-  }
-};
+    // 1. Store the drill ID in state so the specific App (CISSP/AWS) can pick it up
+    setTargetDrillId(drillId);
+
+    // 2. Set viewMode to 'TACTICAL' (assuming tactical is your drill/quiz view)
+    setViewMode('TACTICAL');
+
+    // 3. If a certPath is provided (e.g., 'awssap'), navigate to that route
+    if (certPath) {
+      // We force lowercase and add leading slash to match your Route paths
+      const formattedPath = certPath.startsWith('/') ? certPath : `/${certPath.toLowerCase()}`;
+      
+      // Check for your specific casing on CISSP
+      const finalPath = formattedPath === '/cissp' ? '/CISSP' : formattedPath;
+      
+      navigate(finalPath);
+    }
+
+    // 4. Close the Kanban overlay so the user can see the drill
+    setShowTodos(false);
+  };
 
   // Sync profile logic (unchanged)
   useEffect(() => {
