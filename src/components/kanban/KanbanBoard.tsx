@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import { fetchAuthSession } from 'aws-amplify/auth'; // 🟢 Added for secure group check
+import { fetchAuthSession } from 'aws-amplify/auth'; 
 import type { Schema } from '../../../amplify/data/resource';
 import { CERT_REGISTRY } from '../../utils/certRegistry'; 
 
@@ -36,13 +36,24 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill, addNotificatio
   const [isAdmin, setIsAdmin] = useState(false);
   const { user } = useAuthenticator((context) => [context.user]);
 
-  // 🟢 Check for 'Admins' group in the current session
+  // 🟢 Robust Check for 'Admins' group
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
+        // We use forceRefresh: false to avoid unnecessary network calls
         const session = await fetchAuthSession();
-        const groups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[]) || [];
-        setIsAdmin(groups.includes('Admins'));
+        
+        // Check both Access and ID tokens for the group claim
+        const accGroups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[]) || [];
+        const idGroups = (session.tokens?.idToken?.payload['cognito:groups'] as string[]) || [];
+        
+        const combinedGroups = [...new Set([...accGroups, ...idGroups])];
+        
+        // 🔍 DEBUG: Check this in your browser console (F12)
+        console.log("SECURITY_AUDIT: Current User Groups:", combinedGroups);
+
+        // Logic check: only true if 'Admins' exists in the array
+        setIsAdmin(combinedGroups.includes('Admins'));
       } catch (err) {
         console.error("Auth Session Error:", err);
         setIsAdmin(false);
@@ -51,6 +62,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill, addNotificatio
 
     if (user) {
       checkAdminStatus();
+    } else {
+      setIsAdmin(false);
     }
   }, [user]);
 
@@ -193,7 +206,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill, addNotificatio
         >
           <div style={s.laneHeaderContainer}>
             <h3 style={s.laneHeader}>{lane.label}</h3>
-            {/* 🟢 Secure Admin Button */}
+            {/* 🟢 Strictly enforced UI check using our new isAdmin state */}
             {lane.key === 'COMPLETED' && tasks.some(t => t.status === 'COMPLETED') && isAdmin && (
               <button onClick={handlePurgeAllCompleted} style={s.purgeAllBtn}>[ NUCLEAR_PURGE ]</button>
             )}
