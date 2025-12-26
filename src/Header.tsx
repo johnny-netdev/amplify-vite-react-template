@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { fetchAuthSession } from 'aws-amplify/auth'; // 🟢 Added for secure group verification
 
 interface HeaderProps {
   onToggleTodos: () => void; 
@@ -11,6 +10,7 @@ interface HeaderProps {
   setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
   notifications: { id: string, msg: string, time: string }[];
   clearNotifications: () => void;
+  isAdmin: boolean; // 🟢 Strictly controlled by App.tsx
 }
 
 const Header: React.FC<HeaderProps> = ({ 
@@ -20,7 +20,8 @@ const Header: React.FC<HeaderProps> = ({
   setViewMode, 
   notifications, 
   clearNotifications,
-  context 
+  context,
+  isAdmin // 🟢 Destructured from props
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,37 +29,13 @@ const Header: React.FC<HeaderProps> = ({
   // UI States
   const [showLog, setShowLog] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false); // 🟢 Admin permission state
   
-  const { authStatus, signOut, toSignIn, user } = useAuthenticator(({ authStatus, signOut, toSignIn, user }) => [
-    authStatus, 
-    signOut, 
-    toSignIn,
-    user
+  const { authStatus, signOut, toSignIn } = useAuthenticator(({ authStatus }) => [
+    authStatus
   ]);
 
   const currentVault = location.pathname.substring(1); 
   const isVault = location.pathname !== '/';
-
-  // 🟢 Security Check: Verify 'Admins' group membership
-  useEffect(() => {
-    const checkAdminStatus = async () => {
-      try {
-        const session = await fetchAuthSession();
-        const groups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[]) || [];
-        setIsAdmin(groups.includes('Admins'));
-      } catch (err) {
-        console.error("ADMIN_CHECK_ERROR:", err);
-        setIsAdmin(false);
-      }
-    };
-
-    if (authStatus === 'authenticated') {
-      checkAdminStatus();
-    } else {
-      setIsAdmin(false);
-    }
-  }, [authStatus, user]);
 
   // Trigger red badge when new notifications arrive
   useEffect(() => {
@@ -165,13 +142,13 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       <nav style={styles.nav}>
-        {/* 🟢 Secure Admin Access Button */}
+        {/* Admin Access button */}
         {isAdmin && (
           <button 
             onClick={() => navigate('/admin-portal')} 
             style={styles.adminNavButton}
           >
-            [ ADMIN_ACCESS ]
+            [ ADMIN ACCESS ]
           </button>
         )}
 
@@ -222,7 +199,7 @@ const styles: { [key: string]: React.CSSProperties } = {
   vaultNavGroup: { display: 'flex', gap: '10px', marginRight: '20px', borderRight: '1px solid #333', paddingRight: '20px' },
   navButton: { padding: '6px 15px', backgroundColor: 'transparent', color: '#00ff41', border: '1px solid #333', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace', transition: '0.2s' },
   activeNavButton: { padding: '6px 15px', backgroundColor: '#00ff41', color: 'black', border: '1px solid #00ff41', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace', fontWeight: 'bold' },
-  adminNavButton: { padding: '6px 15px', backgroundColor: 'transparent', color: '#f0f', border: '1px solid #f0f', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace', marginRight: '10px' }, // 🟢 Admin Purple Style
+  adminNavButton: { padding: '6px 15px', backgroundColor: 'transparent', color: '#f0f', border: '1px solid #f0f', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace', marginRight: '10px' },
   bellButton: { background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative' as const, display: 'flex', alignItems: 'center', padding: '5px', color: '#00ff41', marginRight: '10px' },
   badge: { position: 'absolute' as const, top: '4px', right: '2px', width: '8px', height: '8px', backgroundColor: '#ff4b2b', borderRadius: '50%', border: '1px solid #000' },
   authButton: { padding: '6px 15px', backgroundColor: 'transparent', color: '#ff4b2b', border: '1px solid #ff4b2b', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace' },

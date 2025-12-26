@@ -10,14 +10,8 @@ import { Routes, Route, useNavigate, Navigate, useLocation } from 'react-router-
 import CISSPApp from './apps/CISSPApp';
 import SecurityPlusApp from './apps/SecurityPlusApp';
 import AWSSAPApp from './apps/AWSSAPApp';
+import AdminPortal from "./admins/AdminPortal"; // 🟢 Import the new central portal
 import KanbanBoard from "./components/kanban/KanbanBoard";
-
-const AdminPortalPlaceholder = () => (
-  <div style={{ color: '#f0f', padding: '100px', textAlign: 'center', fontFamily: 'monospace' }}>
-    <h1>[ ADMIN_CORE_ACCESS_GRANTED ]</h1>
-    <p>Content Management System Active.</p>
-  </div>
-);
 
 function App() { 
   const navigate = useNavigate();
@@ -35,7 +29,7 @@ function App() {
 
   const addNotification = useCallback((message: string) => {
     const newNotif = {
-      id: Math.random().toString(36).substr(2, 9),
+      id: Math.random().toString(36).substring(2, 9),
       msg: message,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
     };
@@ -97,7 +91,7 @@ function App() {
     <Authenticator>
       {({ user }) => (
         <AuthenticatedAppContent 
-          user={user} 
+          user={user}
           showTodos={showTodos}
           setShowTodos={setShowTodos}
           viewMode={viewMode}
@@ -135,7 +129,7 @@ function AuthenticatedAppContent({
 }: any) {
   
   const [isAdmin, setIsAdmin] = useState(false);
-  const [isAuthChecking, setIsAuthChecking] = useState(true); // 🟢 Prevents UI flicker during check
+  const [isAuthChecking, setIsAuthChecking] = useState(true); 
 
   useEffect(() => {
     if (user) {
@@ -143,7 +137,8 @@ function AuthenticatedAppContent({
         try {
           const session = await fetchAuthSession();
           const groups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[]) || [];
-          setIsAdmin(groups.includes('Admins'));
+          const adminFound = groups.includes('Admins');
+          setIsAdmin(adminFound);
 
           const { data: profiles } = await client.models.UserProfile.list({
             filter: { userId: { eq: user.userId } }
@@ -159,18 +154,19 @@ function AuthenticatedAppContent({
         } catch (error) { 
           addNotification("PROFILE_SYNC_ERROR: CHECK_CONSOLE");
         } finally {
-          setIsAuthChecking(false); // 🟢 Check complete
+          setIsAuthChecking(false); 
         }
       };
       checkForProfile();
     }
   }, [user, addNotification]);
 
-  if (isAuthChecking) return null; // 🟢 Don't render until we know admin status
+  if (isAuthChecking) return null; 
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh', backgroundColor: '#000', overflowX: 'hidden' }}>
       <Header 
+        isAdmin={isAdmin} 
         onToggleTodos={() => setShowTodos(!showTodos)} 
         showTodos={showTodos}
         context={location.pathname === '/' ? 'LOBBY' : 'VAULT'}
@@ -192,37 +188,19 @@ function AuthenticatedAppContent({
             </>
           } />
           
+          {/* 🟢 ROUTE TO CENTRAL ADMIN PORTAL */}
           <Route path="/admin-portal" element={
-            isAdmin ? <AdminPortalPlaceholder /> : <Navigate to="/" replace />
+            isAdmin ? <AdminPortal /> : <Navigate to="/" replace />
           } />
 
-          {/* 🟢 PASSING isAdmin TO SUB-APPS TO HIDE INTERNAL BUTTONS */}
           <Route path="/securityplus" element={
-            <SecurityPlusApp 
-              isAdmin={isAdmin} 
-              viewMode={viewMode} 
-              setViewMode={setViewMode} 
-              preLoadedDrillId={targetDrillId} 
-              onDrillStarted={() => setTargetDrillId(null)} 
-            />
+            <SecurityPlusApp isAdmin={isAdmin} viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
           } />
           <Route path="/CISSP" element={
-            <CISSPApp 
-              isAdmin={isAdmin} 
-              viewMode={viewMode} 
-              setViewMode={setViewMode} 
-              preLoadedDrillId={targetDrillId} 
-              onDrillStarted={() => setTargetDrillId(null)} 
-            />
+            <CISSPApp isAdmin={isAdmin} viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
           } />
           <Route path="/awssap" element={
-            <AWSSAPApp 
-              isAdmin={isAdmin} 
-              viewMode={viewMode} 
-              setViewMode={setViewMode} 
-              preLoadedDrillId={targetDrillId} 
-              onDrillStarted={() => setTargetDrillId(null)} 
-            />
+            <AWSSAPApp isAdmin={isAdmin} viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
           } />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
