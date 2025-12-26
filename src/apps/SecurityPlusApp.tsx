@@ -12,18 +12,19 @@ import SecurityPlusVaultPage from '../securityplus/TacticalVaultPage';
 
 const client = generateClient<Schema>();
 
+// 🟢 Updated Interface to include isAdmin
 interface VaultAppProps {
+  isAdmin: boolean; 
   viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
   setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
   preLoadedDrillId?: string | null;
   onDrillStarted?: () => void;
 }
 
-const SecurityPlusApp: React.FC<VaultAppProps> = ({ viewMode }) => {
+const SecurityPlusApp: React.FC<VaultAppProps> = ({ viewMode, isAdmin }) => {
   const [showAdmin, setShowAdmin] = useState(false);
   const [existingVisuals, setExistingVisuals] = useState<any[]>([]);
   
-  // ⭐️ Expanded State for JSON Support & Schema sync
   const [formData, setFormData] = useState({ 
     title: '', 
     domain: SEC_PLUS_RAW_DATA[0]?.id || '',
@@ -31,18 +32,18 @@ const SecurityPlusApp: React.FC<VaultAppProps> = ({ viewMode }) => {
     config: ''
   });
 
-  // Sync existing modules when Admin is open
+  // Sync existing modules only if user is confirmed Admin
   useEffect(() => {
-    if (showAdmin) {
+    if (showAdmin && isAdmin) {
       const sub = client.models.SecPlusVisual.observeQuery().subscribe({
         next: ({ items }) => setExistingVisuals([...items]),
       });
       return () => sub.unsubscribe();
     }
-  }, [showAdmin]);
+  }, [showAdmin, isAdmin]);
 
-  // ⭐️ Unified Save Function (Handles both JSON and S3 Files)
   const handleSaveModule = async (s3Path?: string) => {
+    if (!isAdmin) return; // 🟢 Double safety check
     try {
       await client.models.SecPlusVisual.create({
         title: formData.title || "Untitled Security Module",
@@ -61,6 +62,7 @@ const SecurityPlusApp: React.FC<VaultAppProps> = ({ viewMode }) => {
   };
 
   const handlePurge = async (visual: any) => {
+    if (!isAdmin) return; // 🟢 Double safety check
     const confirmDelete = window.confirm(`Permanently purge "${visual.title}"?`);
     if (!confirmDelete) return;
 
@@ -84,12 +86,17 @@ const SecurityPlusApp: React.FC<VaultAppProps> = ({ viewMode }) => {
       <div style={v.content}>
         <header style={v.header}>
           <h1 style={v.title}>VAULT_ACCESS // CompTIA Security+</h1>
-          <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
-            {showAdmin ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
-          </button>
+          
+          {/* 🟢 ONLY RENDER BUTTON IF USER IS ADMIN */}
+          {isAdmin && (
+            <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
+              {showAdmin ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
+            </button>
+          )}
         </header>
 
-        {showAdmin && (
+        {/* 🟢 SECURE PANEL GATE */}
+        {showAdmin && isAdmin && (
           <div style={v.adminPanel}>
             <div style={{ marginBottom: '2rem', borderBottom: '1px solid #333', paddingBottom: '2rem' }}>
               <h3 style={{ color: '#00ff41', marginTop: 0, fontSize: '0.9rem', fontFamily: 'monospace' }}>INTEL_INJECTION_INTERFACE</h3>
@@ -122,7 +129,6 @@ const SecurityPlusApp: React.FC<VaultAppProps> = ({ viewMode }) => {
                 </select>
               </div>
 
-              {/* ⭐️ Conditional Protocol View */}
               {formData.type === 'LEGACY' ? (
                 <div style={v.protocolBox}>
                   <p style={v.label}>FILE_TRANSFER_PROTOCOL_ACTIVE</p>
@@ -174,6 +180,7 @@ const SecurityPlusApp: React.FC<VaultAppProps> = ({ viewMode }) => {
   );
 };
 
+// ... (v styles object remains identical)
 const v = {
   container: { position: 'relative' as const, minHeight: '100vh', color: 'white', backgroundColor: 'transparent', overflowX: 'hidden' as const },
   video: { position: 'fixed' as const, top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' as const, zIndex: -2, opacity: 0.5, backgroundColor: '#000' },

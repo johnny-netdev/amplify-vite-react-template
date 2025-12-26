@@ -1,6 +1,7 @@
 // src/App.tsx
 import { useState, useEffect, useCallback } from "react"; 
 import { Authenticator } from "@aws-amplify/ui-react"; 
+import { fetchAuthSession } from 'aws-amplify/auth'; 
 import { client } from "./amplify-client";
 import Header from "./Header";
 import MatrixRain from "./components/MatrixRain"; 
@@ -10,6 +11,13 @@ import CISSPApp from './apps/CISSPApp';
 import SecurityPlusApp from './apps/SecurityPlusApp';
 import AWSSAPApp from './apps/AWSSAPApp';
 import KanbanBoard from "./components/kanban/KanbanBoard";
+
+const AdminPortalPlaceholder = () => (
+  <div style={{ color: '#f0f', padding: '100px', textAlign: 'center', fontFamily: 'monospace' }}>
+    <h1>[ ADMIN_CORE_ACCESS_GRANTED ]</h1>
+    <p>Content Management System Active.</p>
+  </div>
+);
 
 function App() { 
   const navigate = useNavigate();
@@ -126,10 +134,17 @@ function AuthenticatedAppContent({
   location 
 }: any) {
   
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthChecking, setIsAuthChecking] = useState(true); // 🟢 Prevents UI flicker during check
+
   useEffect(() => {
     if (user) {
       const checkForProfile = async () => {
         try {
+          const session = await fetchAuthSession();
+          const groups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[]) || [];
+          setIsAdmin(groups.includes('Admins'));
+
           const { data: profiles } = await client.models.UserProfile.list({
             filter: { userId: { eq: user.userId } }
           });
@@ -143,11 +158,15 @@ function AuthenticatedAppContent({
           }
         } catch (error) { 
           addNotification("PROFILE_SYNC_ERROR: CHECK_CONSOLE");
+        } finally {
+          setIsAuthChecking(false); // 🟢 Check complete
         }
       };
       checkForProfile();
     }
   }, [user, addNotification]);
+
+  if (isAuthChecking) return null; // 🟢 Don't render until we know admin status
 
   return (
     <div style={{ position: 'relative', minHeight: '100vh', backgroundColor: '#000', overflowX: 'hidden' }}>
@@ -172,14 +191,38 @@ function AuthenticatedAppContent({
               </div>
             </>
           } />
+          
+          <Route path="/admin-portal" element={
+            isAdmin ? <AdminPortalPlaceholder /> : <Navigate to="/" replace />
+          } />
+
+          {/* 🟢 PASSING isAdmin TO SUB-APPS TO HIDE INTERNAL BUTTONS */}
           <Route path="/securityplus" element={
-            <SecurityPlusApp viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
+            <SecurityPlusApp 
+              isAdmin={isAdmin} 
+              viewMode={viewMode} 
+              setViewMode={setViewMode} 
+              preLoadedDrillId={targetDrillId} 
+              onDrillStarted={() => setTargetDrillId(null)} 
+            />
           } />
           <Route path="/CISSP" element={
-            <CISSPApp viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
+            <CISSPApp 
+              isAdmin={isAdmin} 
+              viewMode={viewMode} 
+              setViewMode={setViewMode} 
+              preLoadedDrillId={targetDrillId} 
+              onDrillStarted={() => setTargetDrillId(null)} 
+            />
           } />
           <Route path="/awssap" element={
-            <AWSSAPApp viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
+            <AWSSAPApp 
+              isAdmin={isAdmin} 
+              viewMode={viewMode} 
+              setViewMode={setViewMode} 
+              preLoadedDrillId={targetDrillId} 
+              onDrillStarted={() => setTargetDrillId(null)} 
+            />
           } />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

@@ -12,14 +12,16 @@ import CISSPVault from '../cissp/TacticalVaultPage';
 
 const client = generateClient<Schema>();
 
+// 🟢 Updated Interface to receive isAdmin from App.tsx
 interface VaultAppProps {
+  isAdmin: boolean; 
   viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
   setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
   preLoadedDrillId?: string | null;
   onDrillStarted?: () => void;
 }
 
-const CISSPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
+const CISSPApp: React.FC<VaultAppProps> = ({ viewMode, isAdmin }) => {
   const [showAdmin, setShowAdmin] = useState(false);
   const [existingVisuals, setExistingVisuals] = useState<any[]>([]);
   
@@ -30,17 +32,18 @@ const CISSPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
     config: ''
   });
 
-  // Sync existing modules for the Admin Purge List
+  // Sync existing modules only if user is confirmed Admin
   useEffect(() => {
-    if (showAdmin) {
+    if (showAdmin && isAdmin) {
       const sub = client.models.CisspVisual.observeQuery().subscribe({
         next: ({ items }) => setExistingVisuals([...items]),
       });
       return () => sub.unsubscribe();
     }
-  }, [showAdmin]);
+  }, [showAdmin, isAdmin]);
 
   const handleSaveModule = async (s3Path?: string) => {
+    if (!isAdmin) return; // 🟢 Hard block for non-admins
     try {
       await client.models.CisspVisual.create({
         title: formData.title || "Untitled CISSP Intel",
@@ -58,6 +61,7 @@ const CISSPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
   };
 
   const handlePurge = async (visual: any) => {
+    if (!isAdmin) return; // 🟢 Hard block for non-admins
     if (!window.confirm(`Permanently purge "${visual.title}"?`)) return;
     try {
       if (visual.s3Path) await remove({ path: visual.s3Path });
@@ -69,7 +73,6 @@ const CISSPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
 
   return (
     <div className='theme-cissp' style={v.container}>
-      {/* Background Layer */}
       <video key="cissp-bg-video" autoPlay loop muted playsInline style={v.video}>
         <source src="/backgrounds/3d_moving_hex_background.mp4" type="video/mp4" />
       </video>
@@ -78,12 +81,17 @@ const CISSPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
       <div style={v.content}>
         <header style={v.header}>
           <h1 style={v.title}>VAULT_ACCESS // CISSP</h1>
-          <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
-            {showAdmin ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
-          </button>
+          
+          {/* 🟢 Admin Button Gate */}
+          {isAdmin && (
+            <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
+              {showAdmin ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
+            </button>
+          )}
         </header>
 
-        {showAdmin && (
+        {/* 🟢 Admin Panel Gate */}
+        {showAdmin && isAdmin && (
           <div style={v.adminPanel}>
             <div style={{ marginBottom: '2rem', borderBottom: '1px solid #333', paddingBottom: '2rem' }}>
               <h3 style={{ color: '#00ff41', marginTop: 0, fontSize: '0.9rem', fontFamily: 'monospace' }}>INTEL_INGESTION_INTERFACE</h3>
@@ -131,7 +139,6 @@ const CISSPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
           </div>
         )}
 
-        {/* View Switcher: Matches AWSSAP logic exactly */}
         <div style={{ position: 'relative', zIndex: 1 }}>
           {viewMode === 'STRATEGIC' ? <CISSPDashboard /> : <CISSPVault accentColor={CISSP_TERMINAL.accent} />}
         </div>

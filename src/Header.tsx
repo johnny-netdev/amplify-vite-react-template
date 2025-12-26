@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { fetchAuthSession } from 'aws-amplify/auth'; // 🟢 Added for secure group verification
 
 interface HeaderProps {
   onToggleTodos: () => void; 
@@ -27,24 +28,46 @@ const Header: React.FC<HeaderProps> = ({
   // UI States
   const [showLog, setShowLog] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // 🟢 Admin permission state
   
-  const { authStatus, signOut, toSignIn } = useAuthenticator(({ authStatus, signOut, toSignIn }) => [
+  const { authStatus, signOut, toSignIn, user } = useAuthenticator(({ authStatus, signOut, toSignIn, user }) => [
     authStatus, 
     signOut, 
-    toSignIn
+    toSignIn,
+    user
   ]);
 
   const currentVault = location.pathname.substring(1); 
   const isVault = location.pathname !== '/';
 
-  // 🟢 Trigger red badge when new notifications arrive
+  // 🟢 Security Check: Verify 'Admins' group membership
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const groups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[]) || [];
+        setIsAdmin(groups.includes('Admins'));
+      } catch (err) {
+        console.error("ADMIN_CHECK_ERROR:", err);
+        setIsAdmin(false);
+      }
+    };
+
+    if (authStatus === 'authenticated') {
+      checkAdminStatus();
+    } else {
+      setIsAdmin(false);
+    }
+  }, [authStatus, user]);
+
+  // Trigger red badge when new notifications arrive
   useEffect(() => {
     if (notifications.length > 0) {
       setHasUnread(true);
     }
   }, [notifications.length]);
 
-  // 🟢 Clear badge when the user opens the log
+  // Clear badge when the user opens the log
   useEffect(() => {
     if (showLog) {
       setHasUnread(false);
@@ -63,12 +86,9 @@ const Header: React.FC<HeaderProps> = ({
     navigate('/');
   };
 
-  // 🟢 Enhanced Sign Out with Redirect
   const handleSignOut = () => {
     signOut();
-    navigate('/'); // Immediately push to home/login
-    // Optional: Hard refresh ensures no memory leaks of user data
-    // window.location.reload(); 
+    navigate('/'); 
   };
 
   const renderAuthButton = () => {
@@ -105,8 +125,6 @@ const Header: React.FC<HeaderProps> = ({
           <span style={{ fontSize: '1.2rem', filter: showLog ? 'drop-shadow(0 0 8px #00ff41)' : 'none' }}>
             🔔
           </span>
-          
-          {/* Pulsing Badge */}
           {hasUnread && <div className="unread-pulse" style={styles.badge} />}
         </button>
 
@@ -114,10 +132,7 @@ const Header: React.FC<HeaderProps> = ({
           <div style={styles.logDropdown}>
             <div style={styles.logHeader}>
               <span>SYSTEM_LOG</span>
-              <span 
-                onClick={(e) => { e.stopPropagation(); clearNotifications(); }} 
-                style={styles.clearBtn}
-              >
+              <span onClick={(e) => { e.stopPropagation(); clearNotifications(); }} style={styles.clearBtn}>
                 [ PURGE ]
               </span>
             </div>
@@ -150,6 +165,16 @@ const Header: React.FC<HeaderProps> = ({
       </div>
 
       <nav style={styles.nav}>
+        {/* 🟢 Secure Admin Access Button */}
+        {isAdmin && (
+          <button 
+            onClick={() => navigate('/admin-portal')} 
+            style={styles.adminNavButton}
+          >
+            [ ADMIN_ACCESS ]
+          </button>
+        )}
+
         {isVault && (
           <div style={styles.vaultNavGroup}>
             <button 
@@ -191,126 +216,21 @@ const styles: { [key: string]: React.CSSProperties } = {
     top: 0,
     zIndex: 1000,
   },
-  logo: {
-    fontSize: '1.1rem',
-    fontWeight: 'bold',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    fontFamily: 'monospace'
-  },
-  contextBadge: {
-    marginLeft: '15px',
-    color: '#444',
-    fontSize: '0.7rem',
-    letterSpacing: '1px'
-  },
-  nav: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  vaultNavGroup: {
-    display: 'flex',
-    gap: '10px',
-    marginRight: '20px',
-    borderRight: '1px solid #333',
-    paddingRight: '20px'
-  },
-  navButton: {
-    padding: '6px 15px',
-    backgroundColor: 'transparent',
-    color: '#00ff41',
-    border: '1px solid #333',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '0.7rem',
-    fontFamily: 'monospace',
-    transition: '0.2s',
-  },
-  activeNavButton: {
-    padding: '6px 15px',
-    backgroundColor: '#00ff41',
-    color: 'black',
-    border: '1px solid #00ff41',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '0.7rem',
-    fontFamily: 'monospace',
-    fontWeight: 'bold',
-  },
-  bellButton: {
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    position: 'relative' as const,
-    display: 'flex',
-    alignItems: 'center',
-    padding: '5px',
-    color: '#00ff41',
-    marginRight: '10px'
-  },
-  badge: {
-    position: 'absolute' as const,
-    top: '4px',
-    right: '2px',
-    width: '8px',
-    height: '8px',
-    backgroundColor: '#ff4b2b',
-    borderRadius: '50%',
-    border: '1px solid #000'
-  },
-  authButton: {
-    padding: '6px 15px',
-    backgroundColor: 'transparent',
-    color: '#ff4b2b',
-    border: '1px solid #ff4b2b',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '0.7rem',
-    fontFamily: 'monospace',
-  },
-  logDropdown: {
-    position: 'absolute' as const,
-    top: '45px',
-    right: 0,
-    width: '320px',
-    backgroundColor: '#0a0a0a',
-    border: '1px solid #00ff41',
-    borderRadius: '4px',
-    zIndex: 10001,
-    padding: '12px',
-    boxShadow: '0 10px 40px rgba(0,0,0,0.9)'
-  },
-  logHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '0.6rem',
-    color: '#00ff41',
-    borderBottom: '1px solid #222',
-    paddingBottom: '6px',
-    marginBottom: '10px',
-    fontFamily: 'monospace',
-  },
-  logList: { 
-    maxHeight: '250px', 
-    overflowY: 'auto' as const,
-    scrollbarWidth: 'thin',
-  },
-  logItem: {
-    fontSize: '0.65rem',
-    fontFamily: 'monospace',
-    color: '#ccc',
-    padding: '6px 0',
-    borderBottom: '1px solid #1a1a1a',
-    lineHeight: '1.4',
-    textAlign: 'left'
-  },
-  clearBtn: { 
-    cursor: 'pointer', 
-    color: '#ff4b2b',
-    fontWeight: 'bold'
-  }
+  logo: { fontSize: '1.1rem', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', fontFamily: 'monospace' },
+  contextBadge: { marginLeft: '15px', color: '#444', fontSize: '0.7rem', letterSpacing: '1px' },
+  nav: { display: 'flex', alignItems: 'center', gap: '12px' },
+  vaultNavGroup: { display: 'flex', gap: '10px', marginRight: '20px', borderRight: '1px solid #333', paddingRight: '20px' },
+  navButton: { padding: '6px 15px', backgroundColor: 'transparent', color: '#00ff41', border: '1px solid #333', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace', transition: '0.2s' },
+  activeNavButton: { padding: '6px 15px', backgroundColor: '#00ff41', color: 'black', border: '1px solid #00ff41', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace', fontWeight: 'bold' },
+  adminNavButton: { padding: '6px 15px', backgroundColor: 'transparent', color: '#f0f', border: '1px solid #f0f', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace', marginRight: '10px' }, // 🟢 Admin Purple Style
+  bellButton: { background: 'transparent', border: 'none', cursor: 'pointer', position: 'relative' as const, display: 'flex', alignItems: 'center', padding: '5px', color: '#00ff41', marginRight: '10px' },
+  badge: { position: 'absolute' as const, top: '4px', right: '2px', width: '8px', height: '8px', backgroundColor: '#ff4b2b', borderRadius: '50%', border: '1px solid #000' },
+  authButton: { padding: '6px 15px', backgroundColor: 'transparent', color: '#ff4b2b', border: '1px solid #ff4b2b', borderRadius: '4px', cursor: 'pointer', fontSize: '0.7rem', fontFamily: 'monospace' },
+  logDropdown: { position: 'absolute' as const, top: '45px', right: 0, width: '320px', backgroundColor: '#0a0a0a', border: '1px solid #00ff41', borderRadius: '4px', zIndex: 10001, padding: '12px', boxShadow: '0 10px 40px rgba(0,0,0,0.9)' },
+  logHeader: { display: 'flex', justifyContent: 'space-between', fontSize: '0.6rem', color: '#00ff41', borderBottom: '1px solid #222', paddingBottom: '6px', marginBottom: '10px', fontFamily: 'monospace' },
+  logList: { maxHeight: '250px', overflowY: 'auto' as const, scrollbarWidth: 'thin' },
+  logItem: { fontSize: '0.65rem', fontFamily: 'monospace', color: '#ccc', padding: '6px 0', borderBottom: '1px solid #1a1a1a', lineHeight: '1.4', textAlign: 'left' },
+  clearBtn: { cursor: 'pointer', color: '#ff4b2b', fontWeight: 'bold' }
 };
 
 export default Header;

@@ -13,17 +13,17 @@ import AWSSAPVaultPage from '../aws/TacticalVaultPage';
 const client = generateClient<Schema>();
 
 interface VaultAppProps {
+  isAdmin: boolean; // 🟢 Added for authorization
   viewMode: 'LOBBY' | 'STRATEGIC' | 'TACTICAL';
   setViewMode: (val: 'LOBBY' | 'STRATEGIC' | 'TACTICAL') => void;
   preLoadedDrillId?: string | null;
   onDrillStarted?: () => void;
 }
 
-const AWSSAPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
+const AWSSAPApp: React.FC<VaultAppProps> = ({ viewMode, isAdmin }) => {
   const [showAdmin, setShowAdmin] = useState(false);
   const [existingVisuals, setExistingVisuals] = useState<any[]>([]);
   
-  // ⭐️ Expanded State for JSON Support
   const [formData, setFormData] = useState({ 
     title: '', 
     domain: AWS_SAP_RAW_DATA[0]?.id || '',
@@ -31,18 +31,18 @@ const AWSSAPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
     config: ''
   });
 
-  // Sync existing modules when Admin is open
+  // Sync existing modules only if admin and panel is open
   useEffect(() => {
-    if (showAdmin) {
+    if (showAdmin && isAdmin) {
       const sub = client.models.AwsVisual.observeQuery().subscribe({
         next: ({ items }) => setExistingVisuals([...items]),
       });
       return () => sub.unsubscribe();
     }
-  }, [showAdmin]);
+  }, [showAdmin, isAdmin]);
 
-  // ⭐️ Unified Save Function (Handles both JSON and S3 Files)
   const handleSaveModule = async (s3Path?: string) => {
+    if (!isAdmin) return; // 🟢 Safety Check
     try {
       await client.models.AwsVisual.create({
         title: formData.title || "Untitled AWS Module",
@@ -61,6 +61,7 @@ const AWSSAPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
   };
 
   const handlePurge = async (visual: any) => {
+    if (!isAdmin) return; // 🟢 Safety Check
     const confirmDelete = window.confirm(`Permanently purge "${visual.title}"?`);
     if (!confirmDelete) return;
 
@@ -84,12 +85,17 @@ const AWSSAPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
       <div style={v.content}>
         <header style={v.header}>
           <h1 style={v.title}>VAULT_ACCESS // AWS Solutions Architect Pro</h1>
-          <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
-            {showAdmin ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
-          </button>
+          
+          {/* 🟢 Admin Toggle: Only visible to Admins */}
+          {isAdmin && (
+            <button onClick={() => setShowAdmin(!showAdmin)} style={v.adminBtn}>
+              {showAdmin ? '[ CLOSE_TERMINAL ]' : '[ ADMIN_ACCESS ]'}
+            </button>
+          )}
         </header>
 
-        {showAdmin && (
+        {/* 🟢 Admin Panel Gate */}
+        {showAdmin && isAdmin && (
           <div style={v.adminPanel}>
             <div style={{ marginBottom: '2rem', borderBottom: '1px solid #333', paddingBottom: '2rem' }}>
               <h3 style={{ color: '#ff9900', marginTop: 0, fontSize: '0.9rem', fontFamily: 'monospace' }}>INTEL_INGESTION_INTERFACE</h3>
@@ -122,7 +128,6 @@ const AWSSAPApp: React.FC<VaultAppProps> = ({ viewMode }) => {
                 </select>
               </div>
 
-              {/* ⭐️ Conditional Protocol Selector */}
               {formData.type === 'LEGACY' ? (
                 <div style={v.protocolBox}>
                   <p style={v.label}>S3_STORAGE_PROTOCOL_ACTIVE</p>
