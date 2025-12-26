@@ -1,6 +1,6 @@
 // src/App.tsx
 import { useState, useEffect, useCallback } from "react"; 
-import { useAuthenticator, Authenticator } from "@aws-amplify/ui-react"; 
+import { Authenticator } from "@aws-amplify/ui-react"; 
 import { client } from "./amplify-client";
 import Header from "./Header";
 import MatrixRain from "./components/MatrixRain"; 
@@ -11,17 +11,11 @@ import SecurityPlusApp from './apps/SecurityPlusApp';
 import AWSSAPApp from './apps/AWSSAPApp';
 import KanbanBoard from "./components/kanban/KanbanBoard";
 
-// Removed the 'three/tsl' import as it was likely a ghost import.
-
 function App() { 
-  const { authStatus, user } = useAuthenticator((context) => [
-    context.authStatus,
-    context.user,
-  ]);
-  
-  const [showTodos, setShowTodos] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  
+  const [showTodos, setShowTodos] = useState(false);
   const [isLoadingModule, setIsLoadingModule] = useState(false);
   const [targetDrillId, setTargetDrillId] = useState<string | null>(null);
   const [notifications, setNotifications] = useState<{id: string, msg: string, time: string}[]>([]);
@@ -31,14 +25,13 @@ function App() {
     return (saved as 'LOBBY' | 'STRATEGIC' | 'TACTICAL') || 'LOBBY';
   });
 
-  // Memoized to prevent unnecessary re-renders in children
   const addNotification = useCallback((message: string) => {
     const newNotif = {
       id: Math.random().toString(36).substr(2, 9),
       msg: message,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })
     };
-    setNotifications(prev => [newNotif, ...prev].slice(0, 50)); // Keep last 50 logs
+    setNotifications(prev => [newNotif, ...prev].slice(0, 50));
   }, []);
 
   useEffect(() => {
@@ -61,33 +54,9 @@ function App() {
         const finalPath = formattedPath === '/cissp' ? '/CISSP' : formattedPath;
         navigate(finalPath);
       }
-      
-      // Slight delay to allow route transition to complete smoothly
       setTimeout(() => setIsLoadingModule(false), 300);
     }, 1500); 
   };
-
-  useEffect(() => {
-    if (authStatus === 'authenticated' && user) {
-      const checkForProfile = async () => {
-        try {
-          const { data: profiles } = await client.models.UserProfile.list({
-            filter: { userId: { eq: user.userId } }
-          });
-          if (profiles.length === 0) {
-            await client.models.UserProfile.create({
-              userId: user.userId, username: user.username, bio: "User profile initialized.",
-            });
-            addNotification("NEW_PROFILE_CREATED: SUCCESS");
-          }
-        } catch (error) { 
-          console.error(error); 
-          addNotification("PROFILE_SYNC_ERROR: CHECK_CONSOLE");
-        }
-      };
-      checkForProfile();
-    }
-  }, [authStatus, user, addNotification]);
 
   const renderCertButtons = () => {
     const certifications = [
@@ -117,33 +86,92 @@ function App() {
   };
   
   return (
-    <div style={{ position: 'relative', minHeight: '100vh', backgroundColor: '#000', overflowX: 'hidden' }}>
-      {authStatus === 'authenticated' && (
-        <Header 
-          onToggleTodos={() => setShowTodos(!showTodos)} 
+    <Authenticator>
+      {({ user }) => (
+        <AuthenticatedAppContent 
+          user={user} 
           showTodos={showTodos}
-          context={location.pathname === '/' ? 'LOBBY' : 'VAULT'}
+          setShowTodos={setShowTodos}
           viewMode={viewMode}
           setViewMode={setViewMode}
           notifications={notifications}
-          clearNotifications={() => setNotifications([])}
+          setNotifications={setNotifications}
+          addNotification={addNotification}
+          renderCertButtons={renderCertButtons}
+          handleLaunchDrill={handleLaunchDrill}
+          targetDrillId={targetDrillId}
+          setTargetDrillId={setTargetDrillId}
+          isLoadingModule={isLoadingModule}
+          location={location}
         />
       )}
+    </Authenticator>
+  );
+}
+
+function AuthenticatedAppContent({ 
+  user, 
+  showTodos, 
+  setShowTodos, 
+  viewMode, 
+  setViewMode, 
+  notifications, 
+  setNotifications, 
+  addNotification, 
+  renderCertButtons, 
+  handleLaunchDrill, 
+  targetDrillId, 
+  setTargetDrillId, 
+  isLoadingModule, 
+  location 
+}: any) {
+  
+  useEffect(() => {
+    if (user) {
+      const checkForProfile = async () => {
+        try {
+          const { data: profiles } = await client.models.UserProfile.list({
+            filter: { userId: { eq: user.userId } }
+          });
+          if (profiles.length === 0) {
+            await client.models.UserProfile.create({
+              userId: user.userId, 
+              username: user.username, 
+              bio: "User profile initialized.",
+            });
+            addNotification("NEW_PROFILE_CREATED: SUCCESS");
+          }
+        } catch (error) { 
+          addNotification("PROFILE_SYNC_ERROR: CHECK_CONSOLE");
+        }
+      };
+      checkForProfile();
+    }
+  }, [user, addNotification]);
+
+  return (
+    <div style={{ position: 'relative', minHeight: '100vh', backgroundColor: '#000', overflowX: 'hidden' }}>
+      <Header 
+        onToggleTodos={() => setShowTodos(!showTodos)} 
+        showTodos={showTodos}
+        context={location.pathname === '/' ? 'LOBBY' : 'VAULT'}
+        viewMode={viewMode}
+        setViewMode={setViewMode}
+        notifications={notifications}
+        clearNotifications={() => setNotifications([])}
+      />
 
       <main style={{ position: 'relative', zIndex: 1 }}>
         <Routes>
           <Route path="/" element={
-              authStatus === 'authenticated' ? (
-                <>
-                  <MatrixRain /> 
-                  <div style={styles.lobbyContainer}>
-                    <h2 style={styles.lobbyTitle}>Certification Domains</h2>
-                    {renderCertButtons()} 
-                  </div>
-                </>
-              ) : ( <Authenticator /> )
-            }
-          />
+            <>
+              <MatrixRain /> 
+              <div style={styles.lobbyContainer}>
+                <h2 style={styles.lobbyTitle}>Certification Domains</h2>
+                {renderCertButtons()} 
+              </div>
+            </>
+          } />
           <Route path="/securityplus" element={
             <SecurityPlusApp viewMode={viewMode} setViewMode={setViewMode} preLoadedDrillId={targetDrillId} onDrillStarted={() => setTargetDrillId(null)} />
           } />
@@ -160,8 +188,8 @@ function App() {
           <div style={styles.kanbanOverlay} onClick={() => setShowTodos(false)}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: '95%', maxWidth: '1400px', maxHeight: '90vh', overflowY: 'auto' }}>
               <KanbanBoard 
-              onLaunchDrill={handleLaunchDrill}
-              addNotification={addNotification}
+                onLaunchDrill={handleLaunchDrill}
+                addNotification={addNotification}
               />
             </div>
           </div>
@@ -171,12 +199,8 @@ function App() {
       {isLoadingModule && (
         <div style={styles.loaderOverlay}>
           <div style={styles.loaderContent}>
-            <div className="glitch-text" style={styles.loaderText}>
-              [ LOADING MODULES ]
-            </div>
-            <div style={styles.loaderBarContainer}>
-              <div className="loading-bar-fill"></div>
-            </div>
+            <div className="glitch-text" style={styles.loaderText}>[ LOADING MODULES ]</div>
+            <div style={styles.loaderBarContainer}><div className="loading-bar-fill"></div></div>
             <div style={styles.systemStatus}>
               SYSTEM_ACCESS: GRANTED...<br/>
               ENCRYPT_TUNNEL: ACTIVE...<br/>

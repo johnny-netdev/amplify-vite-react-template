@@ -63,10 +63,18 @@ const Header: React.FC<HeaderProps> = ({
     navigate('/');
   };
 
+  // 🟢 Enhanced Sign Out with Redirect
+  const handleSignOut = () => {
+    signOut();
+    navigate('/'); // Immediately push to home/login
+    // Optional: Hard refresh ensures no memory leaks of user data
+    // window.location.reload(); 
+  };
+
   const renderAuthButton = () => {
     if (authStatus === 'authenticated') {
       return (
-        <button onClick={signOut} style={styles.authButton}>
+        <button onClick={handleSignOut} style={styles.authButton}>
           [ SIGN OUT ]
         </button>
       );
