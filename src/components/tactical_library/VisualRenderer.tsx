@@ -10,58 +10,82 @@ interface VisualRendererProps {
 }
 
 const VisualRenderer: React.FC<VisualRendererProps> = ({ type, content, accentColor }) => {
-  // ⭐️ Fixed: This helper is now actually used below
-  const getLegacySource = () => {
-    if (!content) return '';
-    // If content is an object (from getUrl), get the string. If it's already a string, use it.
-    return typeof content === 'object' ? content.url : content;
-  };
-
-  const legacyUrl = getLegacySource();
+  
+  // ⭐️ Fixed: Simplified URL resolution
+  // TacticalVault now passes the raw string URL for Legacy
+  const legacyUrl = typeof content === 'string' ? content : content?.url || '';
 
   return (
     <div style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}>
       
-      {/* HEADER */}
-      <div style={{ borderBottom: `1px solid ${accentColor}`, padding: '10px', marginBottom: '1rem' }}>
-        <span style={{ fontSize: '0.6rem', color: accentColor, fontFamily: 'monospace' }}>
-          DATA_STREAM // {type} // STATUS: ACTIVE
+      {/* STATUS HEADER */}
+      <div style={{ borderBottom: `1px solid ${accentColor}44`, padding: '5px 0', marginBottom: '1rem', display: 'flex', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: '0.6rem', color: accentColor, fontFamily: 'monospace', letterSpacing: '1px' }}>
+          SYSTEM_NODE // {type} // DECRYPTED
+        </span>
+        <span style={{ fontSize: '0.6rem', color: '#444', fontFamily: 'monospace' }}>
+          CRC_CHECK: OK
         </span>
       </div>
 
-      <div style={{ flex: 1, overflow: 'hidden' }}>
-        {/* Case 1: Quiz */}
-        {type === 'QUIZ' && content && 
+      <div style={{ flex: 1, position: 'relative', overflowY: 'auto' }}>
+        {/* Case 1: Quiz (With structural safety) */}
+        {type === 'QUIZ' && content?.questions && (
           <TacticalQuiz 
             data={content} 
             accent={accentColor}
-            onComplete={(score) => console.log(`VisualRenderer: Quiz finished with ${score}%`)}
-          />}
-        
-        {/* Case 2: Diagram */}
-        {type === 'DIAGRAM' && content && <TacticalInfographic data={content} accent={accentColor} />}
-
-        {/* Case 3: Interactive */}
-        {type === 'INTERACTIVE' && content && <InteractiveCanvas data={content} accent={accentColor} />}
-        
-        {/* Case 4: Legacy (Fixed logic and usage) */}
-        {type === 'LEGACY' && legacyUrl && (
-          <iframe 
-            key={legacyUrl} // Forces refresh when switching files
-            src={legacyUrl} 
-            style={{ width: '100%', height: '100%', border: 'none', background: 'white' }} 
-            title="Legacy Vault Content"
+            onComplete={(score) => console.log(`[VAULT] Drill Terminal: ${score}%`)}
           />
         )}
+        
+        {/* Case 2: Diagram */}
+        {type === 'DIAGRAM' && content && (
+          <TacticalInfographic data={content} accent={accentColor} />
+        )}
 
-        {!content && (
-          <div style={{ color: '#333', textAlign: 'center', marginTop: '20%' }}>
-            NO_CONTENT_DECODED
+        {/* Case 3: Interactive */}
+        {type === 'INTERACTIVE' && content && (
+          <InteractiveCanvas data={content} accent={accentColor} />
+        )}
+        
+        {/* Case 4: Legacy (Fixed logic) */}
+        {type === 'LEGACY' && legacyUrl && (
+          <div style={{ height: '100%', width: '100%', background: '#fff', borderRadius: '4px', overflow: 'hidden' }}>
+            <iframe 
+              key={legacyUrl} 
+              src={legacyUrl} 
+              style={{ width: '100%', height: '100%', border: 'none' }} 
+              title="Legacy Intel File"
+              sandbox="allow-scripts allow-same-origin" // Security best practice
+            />
+          </div>
+        )}
+
+        {/* Fallback for Empty or Corrupt Content */}
+        {(!content || (type === 'QUIZ' && !content.questions)) && (
+          <div style={s.errorState}>
+            <div style={{ color: accentColor }}>[!] INTEL_STREAM_INTERRUPTED</div>
+            <div style={{ color: '#444', fontSize: '0.7rem', marginTop: '10px' }}>
+              REASON: {type === 'QUIZ' && !content?.questions ? "MISSING_JSON_SCHEMA" : "NULL_POINTER_EXCEPTION"}
+            </div>
           </div>
         )}
       </div>
     </div>
   );
+};
+
+const s = {
+  errorState: { 
+    display: 'flex', 
+    flexDirection: 'column' as const,
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    height: '60%', 
+    fontFamily: 'monospace', 
+    fontSize: '0.9rem',
+    letterSpacing: '2px'
+  }
 };
 
 export default VisualRenderer;
