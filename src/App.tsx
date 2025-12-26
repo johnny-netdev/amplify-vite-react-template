@@ -159,7 +159,10 @@ function App() {
         {showTodos && (
           <div style={styles.kanbanOverlay} onClick={() => setShowTodos(false)}>
             <div onClick={(e) => e.stopPropagation()} style={{ width: '95%', maxWidth: '1400px', maxHeight: '90vh', overflowY: 'auto' }}>
-              <KanbanBoard onLaunchDrill={handleLaunchDrill} />
+              <KanbanBoard 
+              onLaunchDrill={handleLaunchDrill}
+              addNotification={addNotification}
+              />
             </div>
           </div>
         )}

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
+import { useAuthenticator } from '@aws-amplify/ui-react';
+import { fetchAuthSession } from 'aws-amplify/auth'; // 🟢 Added for secure group check
 import type { Schema } from '../../../amplify/data/resource';
 import { CERT_REGISTRY } from '../../utils/certRegistry'; 
 
@@ -7,6 +9,7 @@ const client = generateClient<Schema>();
 
 interface KanbanBoardProps {
   onLaunchDrill: (drillId: string, certPath?: string) => void;
+  addNotification: (message: string) => void;
 }
 
 type TaskStatus = "TODO" | "IN_PROGRESS" | "BLOCKED" | "COMPLETED";
@@ -23,18 +26,43 @@ const lanes: Lane[] = [
   { key: 'COMPLETED', label: 'Complete' },
 ];
 
-const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
+const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill, addNotification }) => {
   const [tasks, setTasks] = useState<Array<Schema['Task']['type']>>([]);
   const [newTask, setNewTask] = useState('');
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
   const [pendingDeletes, setPendingDeletes] = useState<Record<string, number>>({});
+  
+  // 🟢 Admin state
+  const [isAdmin, setIsAdmin] = useState(false);
+  const { user } = useAuthenticator((context) => [context.user]);
+
+  // 🟢 Check for 'Admins' group in the current session
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const groups = (session.tokens?.accessToken?.payload['cognito:groups'] as string[]) || [];
+        setIsAdmin(groups.includes('Admins'));
+      } catch (err) {
+        console.error("Auth Session Error:", err);
+        setIsAdmin(false);
+      }
+    };
+
+    if (user) {
+      checkAdminStatus();
+    }
+  }, [user]);
 
   useEffect(() => {
     const fetchInitialTasks = async () => {
       try {
         const { data } = await client.models.Task.list({ authMode: 'userPool' });
         setTasks([...data]);
-      } catch (err) { console.error("Manual fetch failed:", err); }
+      } catch (err) { 
+        console.error("Manual fetch failed:", err); 
+        addNotification("DATA_FETCH_ERROR: CHECK_CONNECTION");
+      }
     };
     fetchInitialTasks();
 
@@ -43,9 +71,8 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
       error: (err) => console.warn("Live sync issue:", err)
     });
     return () => sub.unsubscribe();
-  }, []);
+  }, [addNotification]);
 
-  // 🟢 Graceful Purge Timer Logic
   useEffect(() => {
     const interval = setInterval(() => {
       setPendingDeletes(prev => {
@@ -55,6 +82,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
           if (updated[id] <= 1) {
             handleDelete(id); 
             delete updated[id];
+            addNotification(`AUTO_PURGE_COMPLETE: TASK_ID_${id.substring(0,5)}`);
             changed = true;
           } else {
             updated[id] -= 1;
@@ -65,7 +93,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
       });
     }, 1000);
     return () => clearInterval(interval);
-  }, [tasks]);
+  }, [tasks, addNotification]);
 
   const handleAddTask = async () => {
     if (!newTask.trim()) return;
@@ -77,21 +105,27 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
       if (newEntry) {
         setTasks((prev) => [...prev, newEntry]);
         setNewTask('');
+        addNotification(`TASK_DEPLOYED: ${newTask.substring(0, 15)}...`);
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { 
+        console.error(err); 
+        addNotification("DEPLOY_FAILED: DATABASE_REJECTED");
+    }
   };
 
   const handleDrop = async (newStatus: string) => {
     if (!draggedTaskId) return;
 
     if (newStatus === 'COMPLETED') {
-      setPendingDeletes(prev => ({ ...prev, [draggedTaskId]: 300 })); // set timer countdown here in seconds
+      setPendingDeletes(prev => ({ ...prev, [draggedTaskId]: 300 }));
+      addNotification(`TASK_COMPLETED: CLEANUP_TIMER_STARTED`);
     } else {
       setPendingDeletes(prev => {
         const updated = { ...prev };
         delete updated[draggedTaskId];
         return updated;
       });
+      addNotification(`TASK_MOVED: ${newStatus}`);
     }
 
     const previousTasks = [...tasks];
@@ -104,6 +138,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
       }, { authMode: 'userPool' });
     } catch (err) {
       setTasks(previousTasks);
+      addNotification("SYNC_ERROR: REVERTING_STATE");
     }
     setDraggedTaskId(null);
   };
@@ -115,10 +150,10 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
       await client.models.Task.delete({ id }, { authMode: 'userPool' });
     } catch (err) {
       setTasks(previousTasks);
+      addNotification("DELETE_FAILED: CLOUD_SYNC_ERROR");
     }
   };
 
-  // 🟢 NEW: Nuclear Purge for Completed Lane
   const handlePurgeAllCompleted = async () => {
     const completedTasks = tasks.filter(t => t.status === 'COMPLETED');
     if (completedTasks.length === 0) return;
@@ -127,12 +162,15 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
       const previousTasks = [...tasks];
       setTasks(prev => prev.filter(t => t.status !== 'COMPLETED'));
       setPendingDeletes({});
+      addNotification(`NUCLEAR_PURGE_INITIATED: ${completedTasks.length} ITEMS`);
 
       try {
         await Promise.all(completedTasks.map(t => client.models.Task.delete({ id: t.id }, { authMode: 'userPool' })));
+        addNotification("PURGE_SUCCESSFUL");
       } catch (err) {
         console.error("Bulk purge failed:", err);
         setTasks(previousTasks);
+        addNotification("PURGE_FAILED: PARTIAL_RECOVERY");
       }
     }
   };
@@ -145,7 +183,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
   };
 
   return (
-    <div style={{ display: 'flex', gap: 20, padding: 20, background: '#0a0a0a', borderRadius: 8, overflowX: 'auto' }}>
+    <div style={s.boardContainer}>
       {lanes.map(lane => (
         <div 
           key={lane.key} 
@@ -153,11 +191,11 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
           onDrop={() => handleDrop(lane.key)}
           style={s.lane}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottom: '1px solid #222', paddingBottom: 8 }}>
+          <div style={s.laneHeaderContainer}>
             <h3 style={s.laneHeader}>{lane.label}</h3>
-            {/* 🟢 PURGE BUTTON */}
-            {lane.key === 'COMPLETED' && tasks.some(t => t.status === 'COMPLETED') && (
-              <button onClick={handlePurgeAllCompleted} style={s.purgeAllBtn}>[ DELETE ALL ]</button>
+            {/* 🟢 Secure Admin Button */}
+            {lane.key === 'COMPLETED' && tasks.some(t => t.status === 'COMPLETED') && isAdmin && (
+              <button onClick={handlePurgeAllCompleted} style={s.purgeAllBtn}>[ NUCLEAR_PURGE ]</button>
             )}
           </div>
           
@@ -217,7 +255,7 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
                               INITIALIZE_REMEDIATION
                             </button>
                             {isPending && (
-                              <div style={s.timerLabel}>AUTO-PURGE IN {pendingDeletes[task.id]}s</div>
+                              <div style={s.timerLabel}>AUTO-PURGE: {pendingDeletes[task.id]}s</div>
                             )}
                           </div>
                         )}
@@ -239,7 +277,9 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ onLaunchDrill }) => {
 };
 
 const s = {
+  boardContainer: { display: 'flex', gap: 20, padding: 20, background: '#0a0a0a', borderRadius: 8, overflowX: 'auto' as const },
   lane: { flex: 1, minWidth: 280, background: '#111', borderRadius: 6, padding: 12, border: '1px solid #222', minHeight: '500px' },
+  laneHeaderContainer: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15, borderBottom: '1px solid #222', paddingBottom: 8 },
   laneHeader: { color: '#00ff41', fontSize: '0.75rem', fontFamily: 'monospace', letterSpacing: '2px', margin: 0 },
   purgeAllBtn: { background: 'transparent', border: 'none', color: '#ff4b2b', fontSize: '0.6rem', fontFamily: 'monospace', cursor: 'pointer', fontWeight: 'bold' as const },
   input: { width: '100%', padding: '10px', background: '#000', color: '#00ff41', border: '1px solid #00ff41', marginBottom: '6px', fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' as const },

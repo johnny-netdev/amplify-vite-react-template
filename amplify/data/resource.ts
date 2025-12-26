@@ -1,7 +1,8 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
 const schema = a.schema({
-  // 1. THE VAULTS: Metadata for your interactive HTML modules
+  // 1. THE VAULTS: Metadata for interactive modules
+  // Users only need to READ these. Admins need to MANAGE (CRUD) them.
   CisspVisual: a.model({
     title: a.string().required(),
     domain: a.string().required(), 
@@ -10,8 +11,8 @@ const schema = a.schema({
     config: a.string(), 
     s3Path: a.string(),
   }).authorization(allow => [
-    allow.publicApiKey(),
-    allow.authenticated().to(['read']) 
+    allow.authenticated().to(['read']),
+    allow.group('Admins') // Allows you to add/edit modules from an admin panel
   ]),
 
   AwsVisual: a.model({
@@ -22,8 +23,8 @@ const schema = a.schema({
     config: a.string(),
     s3Path: a.string(),
   }).authorization(allow => [
-    allow.publicApiKey(),
-    allow.authenticated().to(['read'])
+    allow.authenticated().to(['read']),
+    allow.group('Admins')
   ]),
 
   SecPlusVisual: a.model({
@@ -34,8 +35,8 @@ const schema = a.schema({
     config: a.string(),
     s3Path: a.string(),
   }).authorization(allow => [
-    allow.publicApiKey(),
-    allow.authenticated().to(['read'])
+    allow.authenticated().to(['read']),
+    allow.group('Admins')
   ]),
 
   // 2. THE TELEMETRY: Stores quiz/game results
@@ -47,8 +48,8 @@ const schema = a.schema({
     duration: a.integer().required(), 
     timestamp: a.datetime().required(),
   }).authorization(allow => [
-    allow.owner(),
-    allow.authenticated().to(['read'])
+    allow.owner(),         // User manages their own history
+    allow.group('Admins')  // Admin can view telemetry for all users
   ]),
 
   // 3. THE PROFILE: Stores user-specific info
@@ -57,29 +58,35 @@ const schema = a.schema({
     username: a.string(),
     bio: a.string(),
     profilePic: a.string(),
-  }).authorization(allow => [allow.owner(), allow.authenticated().to(['read'])]),
+  }).authorization(allow => [
+    allow.owner(), 
+    allow.group('Admins')
+  ]),
 
-  // 4. THE TASK MANAGER: Powers Kanban Board logic
+  // 4. THE TASK MANAGER
   Task: a.model({
     title: a.string().required(),
     status: a.enum(['TODO', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED']),
     score: a.integer(),
-    certID: a.string(),      // The specific certification ID (e.g., "CISSP", "SEC_PLUS")
-
-    // NEW INTELLIGENCE FIELDS
+    certID: a.string(),
     origin: a.enum(['QUIZ_FAILURE', 'TERMINAL_DIAGNOSTIC', 'MANUAL', 'DECAY_RECOVERY']),
-    domain: a.string(),      // e.g., "Domain 4", "IAM", "Encryption"
-    drillId: a.string(),     // The specific quiz or visual ID to launch
-    priority: a.integer(),   // Based on how badly they failed (0-10)
-    metadata: a.json(),      // To store specific quiz results or fail-logs
-  }).authorization(allow => [allow.owner()]),
-}); // Closes the a.schema block
+    domain: a.string(),
+    drillId: a.string(),
+    priority: a.integer(),
+    metadata: a.json(),
+    owner: a.string() 
+  }).authorization(allow => [
+    allow.owner(), 
+    allow.group('Admins')
+  ]),
+});
 
 export type Schema = ClientSchema<typeof schema>;
 
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'apiKey',
+    // Switching default to userPool is safer for a group-based app
+    defaultAuthorizationMode: 'userPool',
   },
 });

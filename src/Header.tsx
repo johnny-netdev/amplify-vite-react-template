@@ -148,13 +148,13 @@ const Header: React.FC<HeaderProps> = ({
               onClick={() => handleModeChange('STRATEGIC')} 
               style={viewMode === 'STRATEGIC' ? styles.activeNavButton : styles.navButton}
             >
-              [ STRATEGIC_SOC ]
+              [ STRATEGIC SOC ]
             </button>
             <button 
               onClick={() => handleModeChange('TACTICAL')} 
               style={viewMode === 'TACTICAL' ? styles.activeNavButton : styles.navButton}
             >
-              [ TACTICAL_VAULT ]
+              [ TACTICAL VAULT ]
             </button>
           </div>
         )}
