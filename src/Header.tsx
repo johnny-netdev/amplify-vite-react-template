@@ -145,7 +145,7 @@ const Header: React.FC<HeaderProps> = ({
         {/* Admin Access button */}
         {isAdmin && (
           <button 
-            onClick={() => navigate('/admin-portal')} 
+            onClick={() => navigate('/admin')} 
             style={styles.adminNavButton}
           >
             [ ADMIN ACCESS ]

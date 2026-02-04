@@ -189,7 +189,7 @@ function AuthenticatedAppContent({
           } />
           
           {/* 🟢 ROUTE TO CENTRAL ADMIN PORTAL */}
-          <Route path="/admin-portal" element={
+          <Route path="/admin" element={
             isAdmin ? <AdminPortal /> : <Navigate to="/" replace />
           } />
 
