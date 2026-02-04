@@ -8,7 +8,7 @@ import type { Schema } from '../../amplify/data/resource';
 // Import Constants
 import { SEC_PLUS_RAW_DATA } from '../securityplus/constant';
 import { AWS_SAP_RAW_DATA } from '../aws/constant';
-import { CISSP_DOMAIN_MAP } from '../cissp/constant'; // 🟢 Now active
+import { CISSP_DOMAIN_MAP } from '../cissp/constant'; 
 
 const client = generateClient<Schema>();
 
@@ -32,39 +32,44 @@ const AdminPortal: React.FC = () => {
     AWSSAP: client.models.AwsVisual
   };
 
-  // 🟢 Properly mapped raw data for all three certifications
+  // ⭐️ Fixed: Normalizing rawData to ensure it's always an array for the selector
   const rawData: any = {
-    SECPLUS: SEC_PLUS_RAW_DATA,
-    AWSSAP: AWS_SAP_RAW_DATA,
-    CISSP: CISSP_DOMAIN_MAP 
+    SECPLUS: Array.isArray(SEC_PLUS_RAW_DATA) ? SEC_PLUS_RAW_DATA : [],
+    AWSSAP: Array.isArray(AWS_SAP_RAW_DATA) ? AWS_SAP_RAW_DATA : [],
+    CISSP: Array.isArray(CISSP_DOMAIN_MAP) ? CISSP_DOMAIN_MAP : Object.values(CISSP_DOMAIN_MAP) 
   };
 
   // Sync Data based on active tab
   useEffect(() => {
+    if (!models[activeCert]) return;
+
     const sub = models[activeCert].observeQuery().subscribe({
       next: ({ items }: any) => setItems([...items]),
+      error: (err: any) => console.error("VAULT_SYNC_ERROR:", err)
     });
     return () => sub.unsubscribe();
   }, [activeCert]);
 
   const handleSave = async (s3Path?: string) => {
+    if (!formData.domain) {
+        alert("CRITICAL_ERROR: SELECT_DOMAIN_BEFORE_INJECTION");
+        return;
+    }
+
     try {
-      // Fallback to the first domain if none selected
-      const targetDomain = formData.domain || rawData[activeCert][0]?.id;
-      
       await models[activeCert].create({
-        title: formData.title || "New Intel Module",
-        domain: targetDomain,
+        title: formData.title || "UNTITLED_MODULE",
+        domain: formData.domain,
         type: formData.type,
         config: formData.config,
         s3Path: s3Path || ''
       });
 
       setFormData({ ...formData, title: '', config: '' });
-      alert(`${activeCert}_VAULT_SYNCHRONIZED`);
+      alert(`${activeCert}_VAULT_SYNCHRONIZED_SUCCESSFULLY`);
     } catch (err) {
       console.error("Injection failed:", err);
-      alert("CRITICAL_ERROR: Check console.");
+      alert("CRITICAL_ERROR: Database rejection. Check console.");
     }
   };
 
@@ -80,13 +85,16 @@ const AdminPortal: React.FC = () => {
     }
   };
 
+  // ⭐️ Dynamic storage path for StorageManager
+  const dynamicPath = `media/${activeCert.toLowerCase()}/${formData.domain}/`;
+
   return (
     <div style={s.container}>
       {/* Header Section */}
       <div style={s.topBar}>
         <div>
           <h2 style={s.title}>[ SYSTEM_ADMIN_CORE ]</h2>
-          <p style={s.subtitle}>CENTRAL_INTEL_MANAGEMENT</p>
+          <p style={s.subtitle}>CENTRAL_INTEL_MANAGEMENT // MODE: SECURE_INJECTION</p>
         </div>
         <div style={{ display: 'flex', gap: '15px' }}>
           <button onClick={() => navigate(-1)} style={s.secondaryBtn}>[ GO_BACK ]</button>
@@ -101,7 +109,7 @@ const AdminPortal: React.FC = () => {
             key={cert} 
             onClick={() => {
                 setActiveCert(cert);
-                setFormData({...formData, domain: ''}); 
+                setFormData({...formData, domain: '', title: '', config: ''}); 
             }}
             style={activeCert === cert ? s.activeTab : s.tab}
           >
@@ -125,7 +133,7 @@ const AdminPortal: React.FC = () => {
               style={s.input} value={formData.domain}
               onChange={e => setFormData({...formData, domain: e.target.value})}
             >
-              <option value="">Select Domain...</option>
+              <option value="">-- SELECT_DOMAIN --</option>
               {rawData[activeCert]?.map((d: any) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
@@ -144,15 +152,24 @@ const AdminPortal: React.FC = () => {
           </div>
 
           {formData.type === 'LEGACY' ? (
-            <div style={s.uploadBox}>
-              <p style={s.label}>FILE_TRANSFER_PROTOCOL_ACTIVE</p>
-              <StorageManager
-                acceptedFileTypes={['text/html']}
-                // 🟢 Path dynamically updates for cissp, securityplus, or aws
-                path={`media/${activeCert.toLowerCase()}/${formData.domain}/`} 
-                maxFileCount={1}
-                onUploadSuccess={(event) => handleSave(event.key)}
-              />
+            <div style={{...s.uploadBox, borderColor: formData.domain ? '#00ff41' : '#333'}}>
+              <p style={{...s.label, color: formData.domain ? '#00ff41' : '#444'}}>
+                {formData.domain ? `PROTOCOL_READY: ${dynamicPath}` : 'SYSTEM_AWAITING_DOMAIN_SELECTION'}
+              </p>
+              
+              {/* ⭐️ Only show StorageManager if a domain is selected to prevent root-level clutter */}
+              {formData.domain ? (
+                <StorageManager
+                  acceptedFileTypes={['text/html']}
+                  path={dynamicPath} 
+                  maxFileCount={1}
+                  onUploadSuccess={(event) => handleSave(event.key)}
+                />
+              ) : (
+                <div style={{color: '#444', fontSize: '0.7rem', textAlign: 'center', padding: '20px'}}>
+                  [ SELECT_DOMAIN_TO_INITIALIZE_TRANSFER ]
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -167,16 +184,16 @@ const AdminPortal: React.FC = () => {
 
         {/* Inventory List */}
         <div style={s.panel}>
-          <h3 style={s.label}>ACTIVE_VAULT_INVENTORY</h3>
+          <h3 style={s.label}>ACTIVE_VAULT_INVENTORY ({items.length})</h3>
           <div style={s.list}>
             {items.length === 0 ? (
-                <div style={s.emptyState}>NO_OBJECTS_FOUND</div>
+                <div style={s.emptyState}>NO_OBJECTS_FOUND_IN_SECTOR</div>
             ) : (
                 items.map(item => (
                 <div key={item.id} style={s.listItem}>
                     <div>
                         <div style={{color: '#fff', fontSize: '0.85rem'}}>{item.title}</div>
-                        <div style={{color: '#666', fontSize: '0.6rem'}}>{item.domain} | {item.type}</div>
+                        <div style={{color: '#666', fontSize: '0.6rem'}}>DOMAIN: {item.domain} | TYPE: {item.type}</div>
                     </div>
                     <button style={s.purgeBtn} onClick={() => handlePurge(item)}>[ PURGE ]</button>
                 </div>
@@ -191,20 +208,20 @@ const AdminPortal: React.FC = () => {
 
 const s = {
   container: { padding: '40px', color: '#f0f', fontFamily: 'monospace', minHeight: '100vh', backgroundColor: '#050505' },
-  topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #f0f', paddingBottom: '20px', marginBottom: '30px' },
-  title: { letterSpacing: '4px', margin: 0, color: '#f0f' },
-  subtitle: { fontSize: '0.7rem', color: '#666', marginTop: '5px' },
+  topBar: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #333', paddingBottom: '20px', marginBottom: '30px' },
+  title: { letterSpacing: '4px', margin: 0, color: '#00ff41' },
+  subtitle: { fontSize: '0.7rem', color: '#444', marginTop: '5px' },
   tabs: { display: 'flex', gap: '10px', marginBottom: '20px' },
-  tab: { background: 'transparent', color: '#f0f', border: '1px solid #333', padding: '10px 25px', cursor: 'pointer', fontSize: '0.8rem' },
-  activeTab: { background: '#f0f', color: 'black', border: '1px solid #f0f', padding: '10px 25px', fontWeight: 'bold' as const, fontSize: '0.8rem' },
+  tab: { background: 'transparent', color: '#666', border: '1px solid #222', padding: '10px 25px', cursor: 'pointer', fontSize: '0.8rem', transition: '0.3s' },
+  activeTab: { background: '#00ff41', color: 'black', border: '1px solid #00ff41', padding: '10px 25px', fontWeight: 'bold' as const, fontSize: '0.8rem' },
   grid: { display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '30px' },
-  panel: { background: 'rgba(10,10,10,0.8)', border: '1px solid #333', padding: '25px', borderRadius: '4px' },
+  panel: { background: 'rgba(10,10,10,0.8)', border: '1px solid #222', padding: '25px', borderRadius: '4px' },
   label: { fontSize: '0.7rem', color: '#00ff41', marginBottom: '20px', letterSpacing: '2px', textTransform: 'uppercase' as const },
   formGroup: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' },
-  input: { width: '100%', padding: '12px', background: '#000', color: '#f0f', border: '1px solid #333', outline: 'none', fontSize: '0.8rem' },
+  input: { width: '100%', padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', outline: 'none', fontSize: '0.8rem' },
   textarea: { width: '100%', height: '300px', background: '#000', color: '#00ff41', border: '1px solid #333', padding: '15px', marginBottom: '15px', outline: 'none', fontFamily: 'monospace', fontSize: '0.75rem' },
-  uploadBox: { padding: '20px', border: '1px dashed #333', background: 'rgba(255,255,255,0.02)' },
-  saveBtn: { width: '100%', padding: '15px', background: '#f0f', color: 'black', border: 'none', fontWeight: 'bold' as const, cursor: 'pointer', letterSpacing: '1px' },
+  uploadBox: { padding: '20px', border: '1px dashed #333', background: 'rgba(0,255,65,0.02)', borderRadius: '4px' },
+  saveBtn: { width: '100%', padding: '15px', background: '#00ff41', color: 'black', border: 'none', fontWeight: 'bold' as const, cursor: 'pointer', letterSpacing: '1px' },
   exitBtn: { background: 'transparent', color: '#ff4b2b', border: '1px solid #ff4b2b', padding: '8px 20px', cursor: 'pointer', fontSize: '0.7rem' },
   secondaryBtn: { background: 'transparent', color: '#aaa', border: '1px solid #333', padding: '8px 20px', cursor: 'pointer', fontSize: '0.7rem' },
   list: { maxHeight: '600px', overflowY: 'auto' as const, paddingRight: '10px' },
