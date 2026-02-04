@@ -32,11 +32,19 @@ const AdminPortal: React.FC = () => {
     AWSSAP: client.models.AwsVisual
   };
 
-  // ⭐️ Fixed: Normalizing rawData to ensure it's always an array for the selector
+  /**
+   * ⭐️ DATA NORMALIZATION STRATEGY
+   * Security+ / AWS: Arrays [ {id, name} ]
+   * CISSP: Record { ID: Name }
+   */
   const rawData: any = {
     SECPLUS: Array.isArray(SEC_PLUS_RAW_DATA) ? SEC_PLUS_RAW_DATA : [],
     AWSSAP: Array.isArray(AWS_SAP_RAW_DATA) ? AWS_SAP_RAW_DATA : [],
-    CISSP: Array.isArray(CISSP_DOMAIN_MAP) ? CISSP_DOMAIN_MAP : Object.values(CISSP_DOMAIN_MAP) 
+    // Transform CISSP Object into the standard Array format the dropdown expects
+    CISSP: Object.entries(CISSP_DOMAIN_MAP).map(([key, value]) => ({
+      id: key,    // e.g., "SOFTWARE_DEV_SEC"
+      name: value // e.g., "Domain 8: Software Development Security"
+    }))
   };
 
   // Sync Data based on active tab
@@ -90,7 +98,6 @@ const AdminPortal: React.FC = () => {
 
   return (
     <div style={s.container}>
-      {/* Header Section */}
       <div style={s.topBar}>
         <div>
           <h2 style={s.title}>[ SYSTEM_ADMIN_CORE ]</h2>
@@ -102,7 +109,6 @@ const AdminPortal: React.FC = () => {
         </div>
       </div>
       
-      {/* Selector Tabs */}
       <div style={s.tabs}>
         {(['SECPLUS', 'CISSP', 'AWSSAP'] as CertType[]).map(cert => (
           <button 
@@ -119,7 +125,6 @@ const AdminPortal: React.FC = () => {
       </div>
 
       <div style={s.grid}>
-        {/* Ingestion Form */}
         <div style={s.panel}>
           <h3 style={s.label}>INTEL_INJECTION_INTERFACE ({activeCert})</h3>
           
@@ -157,7 +162,6 @@ const AdminPortal: React.FC = () => {
                 {formData.domain ? `PROTOCOL_READY: ${dynamicPath}` : 'SYSTEM_AWAITING_DOMAIN_SELECTION'}
               </p>
               
-              {/* ⭐️ Only show StorageManager if a domain is selected to prevent root-level clutter */}
               {formData.domain ? (
                 <StorageManager
                   acceptedFileTypes={['text/html']}
@@ -182,7 +186,6 @@ const AdminPortal: React.FC = () => {
           )}
         </div>
 
-        {/* Inventory List */}
         <div style={s.panel}>
           <h3 style={s.label}>ACTIVE_VAULT_INVENTORY ({items.length})</h3>
           <div style={s.list}>
