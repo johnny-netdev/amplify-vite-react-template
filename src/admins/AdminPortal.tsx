@@ -52,10 +52,10 @@ const AdminPortal: React.FC = () => {
     return () => sub.unsubscribe();
   }, [activeCert]);
 
-  // ⭐️ ENFORCED DYNAMIC INJECTION FOR ARIES
+  // ⭐️ UPDATED: BLANK INJECTION FOR ARIES
   const handleBankInjection = async () => {
-    if (!formData.domain || !formData.config) {
-      alert("CRITICAL_ERROR: DOMAIN_AND_JSON_REQUIRED_FOR_BANK_INJECTION");
+    if (!formData.config) {
+      alert("CRITICAL_ERROR: JSON_CONFIGURATION_REQUIRED_FOR_INJECTION");
       return;
     }
 
@@ -73,9 +73,18 @@ const AdminPortal: React.FC = () => {
           continue;
         }
 
+        // BLANK STRATEGY: Use domain/cert from JSON, fallback to UI state if missing
+        const targetDomain = q.domain || formData.domain;
+        const targetCert = q.certID || activeCert;
+
+        if (!targetDomain) {
+          console.warn("MISSING_DOMAIN_FOR_RECORD:", q.conceptTag);
+          continue;
+        }
+
         await client.models.QuestionBank.create({
-          certID: activeCert,
-          domain: formData.domain,
+          certID: targetCert,
+          domain: targetDomain,
           conceptTag: q.conceptTag,
           questionText: q.questionText,
           options: q.options || [],
@@ -86,7 +95,7 @@ const AdminPortal: React.FC = () => {
         successCount++;
       }
 
-      alert(`SUCCESS: ${successCount} QUESTIONS_INJECTED_TO_DYNAMIC_BANK`);
+      alert(`SUCCESS: ${successCount} QUESTIONS_INJECTED_VIA_BLANK_STRATEGY`);
       setFormData({ ...formData, config: '' });
     } catch (err) {
       alert("INVALID_JSON_FORMAT: Ensure data matches QuestionBank schema.");
@@ -160,7 +169,7 @@ const AdminPortal: React.FC = () => {
       <div style={s.topBar}>
         <div>
           <h2 style={s.title}>[ SYSTEM_ADMIN_CORE ]</h2>
-          <p style={s.subtitle}>DYNAMIC_BANK_MANAGEMENT // MODE: {isUploading ? 'SYNCING...' : 'IDLE'}</p>
+          <p style={s.subtitle}>BLANK_INJECTION_PROTOCOL // ACTIVE_CERT: {activeCert}</p>
         </div>
         <div style={{ display: 'flex', gap: '15px' }}>
           <button onClick={handleNukeSector} style={s.nukeBtn}>[ NUKE_DOMAIN_BANK ]</button>
@@ -186,11 +195,11 @@ const AdminPortal: React.FC = () => {
 
       <div style={s.grid}>
         <div style={s.panel}>
-          <h3 style={s.label}>INTEL_INJECTION_INTERFACE ({activeCert})</h3>
+          <h3 style={s.label}>INTEL_INJECTION_INTERFACE</h3>
           
           <div style={s.formGroup}>
             <input 
-              style={s.input} placeholder="Module Title (For Visuals)" value={formData.title}
+              style={s.input} placeholder="Legacy Title (Optional)" value={formData.title}
               onChange={e => setFormData({...formData, title: e.target.value})}
             />
             
@@ -198,7 +207,7 @@ const AdminPortal: React.FC = () => {
               style={s.input} value={formData.domain}
               onChange={e => setFormData({...formData, domain: e.target.value})}
             >
-              <option value="">-- SELECT_DOMAIN --</option>
+              <option value="">-- SELECT_DOMAIN (Optional for Blank) --</option>
               {rawData[activeCert]?.map((d: any) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
@@ -234,7 +243,7 @@ const AdminPortal: React.FC = () => {
             <>
               <textarea 
                 style={s.textarea} 
-                placeholder='[ { "conceptTag": "TAG", "questionText": "...", "options": [...], "correctAnswer": "...", "explanation": "..." } ]'
+                placeholder='PASTE_JSON_HERE (BLANK_INJECTION_MODE_ENABLED)'
                 value={formData.config}
                 onChange={e => setFormData({...formData, config: e.target.value})}
               />
@@ -250,7 +259,7 @@ const AdminPortal: React.FC = () => {
         </div>
 
         <div style={s.panel}>
-          <h3 style={s.label}>VISUAL_VAULT_INVENTORY ({items.length})</h3>
+          <h3 style={s.label}>VAULT_INVENTORY ({items.length})</h3>
           <div style={s.list}>
             {items.map(item => (
               <div key={item.id} style={s.listItem}>
@@ -281,7 +290,7 @@ const s = {
   label: { fontSize: '0.7rem', color: '#00ff41', marginBottom: '20px', letterSpacing: '2px' },
   formGroup: { display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '20px' },
   input: { width: '100%', padding: '12px', background: '#000', color: '#fff', border: '1px solid #333', outline: 'none', fontSize: '0.8rem' },
-  textarea: { width: '100%', height: '300px', background: '#000', color: '#00ff41', border: '1px solid #333', padding: '15px', marginBottom: '15px', outline: 'none', fontFamily: 'monospace', fontSize: '0.75rem' },
+  textarea: { width: '100%', height: '350px', background: '#000', color: '#00ff41', border: '1px solid #333', padding: '15px', marginBottom: '15px', outline: 'none', fontFamily: 'monospace', fontSize: '0.75rem' },
   uploadBox: { padding: '20px', border: '1px dashed #333', background: 'rgba(0,255,65,0.02)' },
   saveBtn: { width: '100%', padding: '15px', background: '#00ff41', color: 'black', border: 'none', fontWeight: 'bold' as const, cursor: 'pointer' },
   exitBtn: { background: 'transparent', color: '#ff4b2b', border: '1px solid #ff4b2b', padding: '8px 20px', cursor: 'pointer', fontSize: '0.7rem' },
