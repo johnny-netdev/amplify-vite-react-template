@@ -2,7 +2,6 @@ import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
 const schema = a.schema({
   // 1. THE VAULTS: Metadata for interactive modules
-  // Users only need to READ these. Admins need to MANAGE (CRUD) them.
   CisspVisual: a.model({
     title: a.string().required(),
     domain: a.string().required(), 
@@ -10,9 +9,10 @@ const schema = a.schema({
     type: a.enum(['QUIZ', 'DIAGRAM', 'INTERACTIVE', 'LEGACY']),
     config: a.string(), 
     s3Path: a.string(),
+    certID: a.string().default('CISSP'), // ⭐️ Added for unified filtering
   }).authorization(allow => [
     allow.authenticated().to(['read']),
-    allow.group('Admins') // Allows you to add/edit modules from an admin panel
+    allow.group('Admins')
   ]),
 
   AwsVisual: a.model({
@@ -22,6 +22,7 @@ const schema = a.schema({
     type: a.enum(['QUIZ', 'DIAGRAM', 'INTERACTIVE', 'LEGACY']),
     config: a.string(),
     s3Path: a.string(),
+    certID: a.string().default('AWS_SAP'),
   }).authorization(allow => [
     allow.authenticated().to(['read']),
     allow.group('Admins')
@@ -34,12 +35,29 @@ const schema = a.schema({
     type: a.enum(['QUIZ', 'DIAGRAM', 'INTERACTIVE', 'LEGACY']),
     config: a.string(),
     s3Path: a.string(),
+    certID: a.string().default('SEC_PLUS'),
   }).authorization(allow => [
     allow.authenticated().to(['read']),
     allow.group('Admins')
   ]),
 
-  // 2. THE TELEMETRY: Stores quiz/game results
+  // ⭐️ NEW: THE DYNAMIC QUESTION BANK
+  // This is where you will "Bulk Upload" your JSON questions.
+  QuestionBank: a.model({
+    certID: a.string().required(),      // e.g., 'CISSP'
+    domain: a.string().required(),      // e.g., 'SOFTWARE_DEV_SEC'
+    conceptTag: a.string().required(),  // e.g., 'D8_SDLC_PHASES' (ARIES uses this)
+    questionText: a.string().required(),
+    options: a.string().array(),        // Store as ["A) Option", "B) Option"]
+    correctAnswer: a.string().required(),
+    explanation: a.string(),
+    difficulty: a.enum(['EASY', 'MEDIUM', 'HARD']),
+  }).authorization(allow => [
+    allow.authenticated().to(['read']),
+    allow.group('Admins')
+  ]),
+
+  // 2. THE TELEMETRY: Stores high-level quiz/game results
   UserActivity: a.model({
     userId: a.string().required(),    
     visualId: a.id().required(),      
@@ -48,11 +66,11 @@ const schema = a.schema({
     duration: a.integer().required(), 
     timestamp: a.datetime().required(),
   }).authorization(allow => [
-    allow.owner(),         // User manages their own history
-    allow.group('Admins')  // Admin can view telemetry for all users
+    allow.owner(),
+    allow.group('Admins')
   ]),
 
-  // 3. THE PROFILE: Stores user-specific info
+  // 3. THE PROFILE
   UserProfile: a.model({
     userId: a.string().required(),
     username: a.string(),
@@ -80,29 +98,25 @@ const schema = a.schema({
     allow.group('Admins')
   ]),
 
-  // 5. THE AI SIGNALS: Granular tracking for the Diagnostic AI
+  // 5. THE AI SIGNALS: Granular tracking for A.R.I.E.S.
   UserInteraction: a.model({
     userEmail: a.string().required(),
     moduleTitle: a.string(),
-    conceptTag: a.string(), // e.g., "RMF_PHASES", "CIA_TRIAD"
+    conceptTag: a.string(), 
     status: a.enum(['CORRECT', 'INCORRECT', 'STARTED']),
-    metadata: a.string(),   // Optional: specific error message or context
+    metadata: a.string(),   
     timestamp: a.datetime().required(),
   }).authorization(allow => [
     allow.owner(),         
     allow.group('Admins')
   ]),
-
-
 });
-
 
 export type Schema = ClientSchema<typeof schema>;
 
 export const data = defineData({
   schema,
   authorizationModes: {
-    // Switching default to userPool is safer for a group-based app
     defaultAuthorizationMode: 'userPool',
   },
 });
