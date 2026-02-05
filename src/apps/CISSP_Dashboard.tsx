@@ -4,7 +4,7 @@ import type { Schema } from '../../amplify/data/resource';
 import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
 import ActionTerminal from '../components/terminal/ActionTerminal';
 import { useDiagnosticEngine } from '../utils/useDiagnosticEngine';
-
+import AIGatekeeper from '../components/ai/AIGatekeeper'; //ARIES UI
 
 const DOMAIN_WEIGHTS: Record<string, number> = {
   RISK_MGMT: 0.15, 
@@ -17,7 +17,6 @@ const DOMAIN_WEIGHTS: Record<string, number> = {
   SOFTWARE_DEV_SEC: 0.11
 };
 
-// 🔥 Accept props for the Bridge
 interface DashboardProps {
   preLoadedDrillId?: string | null;
   onDrillStarted?: () => void;
@@ -25,6 +24,8 @@ interface DashboardProps {
 
 const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillStarted }) => {
   const [activities, setActivities] = useState<Schema['UserActivity']['type'][]>([]);
+  // ⭐️ NEW: State for ARIES challenge
+  const [activeChallenge, setActiveChallenge] = useState<any>(null);
 
   useEffect(() => {
     const sub = client.models.UserActivity.observeQuery().subscribe({
@@ -33,15 +34,24 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
     return () => sub.unsubscribe();
   }, []);
   
-  const { insights } = useDiagnosticEngine();
+  const { insights, getAriesChallenge, refresh } = useDiagnosticEngine();
+
+  // ⭐️ NEW: Check for weak spots on load or when insights update
   useEffect(() => {
-  if (insights.totalPoints > 0) {
-    console.log("--- BRAIN DIAGNOSTIC REPORT ---");
-    console.log("Weak Spots:", insights.weakSpots);
-    console.log("Atrophy Risks:", insights.atrophyRisk);
-    console.log("Total Data Points:", insights.totalPoints);
-  }
-}, [insights]);
+    if (insights.totalPoints > 0 && !activeChallenge) {
+      const challenge = getAriesChallenge();
+      if (challenge) {
+        console.log("ARIES // INTERCEPT_TRIGGERED:", challenge.topic);
+        setActiveChallenge(challenge);
+      }
+    }
+  }, [insights, getAriesChallenge]);
+
+  const handleAriesResolve = (summary: string) => {
+    console.log("ARIES // REBUTTAL_LOGGED:", summary);
+    // In prod, you'd save this summary to a "Reflections" table
+    setActiveChallenge(null);
+  };
 
   const stats = useMemo(() => {
     const domainScores: Record<string, number[]> = {};
@@ -88,6 +98,14 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
 
   return (
     <div style={styles.dashboardWrapper}>
+      {/* ⭐️ NEW: Render ARIES Gatekeeper if a challenge is active */}
+      {activeChallenge && (
+        <AIGatekeeper 
+          challenge={activeChallenge} 
+          onResolve={handleAriesResolve} 
+        />
+      )}
+
       <div style={styles.leftColumn}>
         <header style={styles.header}>
           <h2 style={styles.title}>STRATEGIC_INTEL // CISSP_SOC</h2>
@@ -109,8 +127,8 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
           </div>
           <div style={styles.metricCard}>
             <div style={styles.metricLabel}>ENGAGEMENT_LOGS</div>
-            <div style={styles.metricValue}>{activities.length}</div>
-            <div style={styles.footer}>Total Data Points Recorded</div>
+            <div style={styles.metricValue}>{insights.totalPoints}</div>
+            <div style={styles.footer}>Granular Interaction Signals</div>
           </div>
         </div>
 
@@ -136,11 +154,14 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
         </div>
       </div>
 
-      {/* 🔥 RIGHT COLUMN: ACTION TERMINAL INTEGRATION */}
       <div style={styles.rightColumn}>
         <ActionTerminal 
            preLoadedDrillId={preLoadedDrillId} 
-           onDrillStarted={onDrillStarted}
+           // ⭐️ Refresh the engine when drills finish
+           onDrillStarted={() => {
+             if (onDrillStarted) onDrillStarted();
+             refresh();
+           }}
         />
       </div>
     </div>
@@ -149,7 +170,7 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
 
 const styles = {
   dashboardWrapper: { display: 'flex' as const, gap: '20px', width: '100%', fontFamily: 'monospace' },
-  leftColumn: { flex: '0 0 65%', padding: '10px' }, // Adjusted width to fit terminal
+  leftColumn: { flex: '0 0 65%', padding: '10px' },
   rightColumn: { 
     flex: '0 0 35%', 
     padding: '10px', 

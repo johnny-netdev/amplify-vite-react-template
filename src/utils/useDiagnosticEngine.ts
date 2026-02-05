@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '../../amplify/data/resource';
+import vaultData from '../data/challengeVault.json';
 
 const client = generateClient<Schema>();
 
@@ -12,9 +13,7 @@ export const useDiagnosticEngine = () => {
   }>({ weakSpots: [], atrophyRisk: [], totalPoints: 0 });
 
   const analyzeData = async () => {
-    // 1. Fetch all interactions for the user
     const { data: items } = await client.models.UserInteraction.list();
-    
     const now = new Date();
     const stats: Record<string, { correct: number; total: number; lastSeen: Date }> = {};
 
@@ -23,15 +22,12 @@ export const useDiagnosticEngine = () => {
       if (!stats[tag]) {
         stats[tag] = { correct: 0, total: 0, lastSeen: new Date(item.timestamp) };
       }
-
       stats[tag].total += 1;
       if (item.status === 'CORRECT') stats[tag].correct += 1;
-      
       const itemDate = new Date(item.timestamp);
       if (itemDate > stats[tag].lastSeen) stats[tag].lastSeen = itemDate;
     });
 
-    // 2. Filter for Weak Spots (< 70% accuracy) and Atrophy (> 48 hours)
     const weakSpots = Object.keys(stats).filter(tag => 
       (stats[tag].correct / stats[tag].total) < 0.7
     );
@@ -44,9 +40,22 @@ export const useDiagnosticEngine = () => {
     setInsights({ weakSpots, atrophyRisk, totalPoints: items.length });
   };
 
+  // ⭐️ NEW: The Summoner Function
+  const getAriesChallenge = () => {
+    if (insights.weakSpots.length === 0) return null;
+    
+    // Pick the "weakest" spot first
+    const primaryTarget = insights.weakSpots[0];
+    
+    // Find a matching challenge in our JSON vault
+    const challenge = vaultData.challenges.find(c => c.topic === primaryTarget);
+    
+    return challenge || null;
+  };
+
   useEffect(() => {
     analyzeData();
   }, []);
 
-  return { insights, refresh: analyzeData };
+  return { insights, getAriesChallenge, refresh: analyzeData };
 };

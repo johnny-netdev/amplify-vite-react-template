@@ -1,0 +1,52 @@
+{
+  "challenges": [
+    {
+      "id": "cissp-sdlc-01",
+      "certID": "CISSP",
+      "topic": "D8_SDLC_PHASES",
+      "fallacyType": "EFFICIENCY_TRAP",
+      "strawMan": "Security testing is only truly relevant in the Testing phase. Doing it earlier just slows down the developers and creates 'Analysis Paralysis' for the business.",
+      "options": [
+        {
+          "id": "opt-1",
+          "text": "Correct. We should prioritize speed and only fix security bugs once the code is fully functional.",
+          "isCorrect": false
+        },
+        {
+          "id": "opt-2",
+          "text": "Wrong. 'Shifting Left' identifies flaws in the Design phase when they cost 10x less to fix than in production.",
+          "isCorrect": true
+        },
+        {
+          "id": "opt-3",
+          "text": "Correct. We should remove all development environments and only code on air-gapped machines to be safe.",
+          "isCorrect": false
+        }
+      ]
+    },
+    {
+      "id": "secplus-phys-01",
+      "certID": "SEC_PLUS",
+      "topic": "PHYSICAL_SECURITY",
+      "fallacyType": "AVAILABILITY_BIAS",
+      "strawMan": "We have a professional security guard at the front gate, so we don't need to waste budget on badge readers for the internal server room doors.",
+      "options": [
+        {
+          "id": "opt-1",
+          "text": "Defense in Depth requires layered controls; a guard is only the first perimeter and can be bypassed or social-engineered.",
+          "isCorrect": true
+        },
+        {
+          "id": "opt-2",
+          "text": "Guards are 100% effective as long as they have a clear line of sight to the servers.",
+          "isCorrect": false
+        },
+        {
+          "id": "opt-3",
+          "text": "We should replace all guards with automated turrets to ensure zero human error.",
+          "isCorrect": false
+        }
+      ]
+    }
+  ]
+}
