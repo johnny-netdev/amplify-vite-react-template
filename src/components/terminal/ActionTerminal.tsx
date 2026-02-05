@@ -21,9 +21,10 @@ const ActionTerminal: React.FC<TerminalProps> = ({ preLoadedDrillId, onDrillStar
   const location = useLocation();
   const [activeMission, setActiveMission] = useState<Mission | null>(null);
   const [selectedSubDomain, setSelectedSubDomain] = useState<string | null>(null);
+  const [bankQuestions, setBankQuestions] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const isReporting = useRef(false);
 
-  // 🟢 DYNAMIC CONFIGURATION FROM REGISTRY
   const config = getCertConfigByPath(location.pathname);
 
   const missions: Mission[] = [
@@ -32,6 +33,43 @@ const ActionTerminal: React.FC<TerminalProps> = ({ preLoadedDrillId, onDrillStar
     { id: 'weak-scan', label: '[ WEAK POINTS ANALYSIS ]', description: 'AI-driven vulnerability assessment.', domain: 'Adaptive' },
     { id: 'scen-drill', label: '[ SCENARIO ANALYSIS DRILLS ]', description: 'Critical infrastructure logic tests.', domain: 'Applied Logic' },
   ];
+
+  // ⭐️ NEW: FETCH QUESTIONS FROM DYNAMODB
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      if (!selectedSubDomain) return;
+      
+      setIsLoading(true);
+      try {
+        const { data: records } = await client.models.QuestionBank.list({
+          filter: {
+            certID: { eq: config.id }, // e.g., 'CISSP'
+            domain: { eq: selectedSubDomain }
+          }
+        });
+
+        if (records.length > 0) {
+          const formatted = records.map((q, index) => ({
+            id: q.id || index,
+            text: q.questionText,
+            options: q.options,
+            correctAnswer: q.correctAnswer,
+            explanation: q.explanation,
+            conceptTag: q.conceptTag // Crucial for ARIES telemetry
+          }));
+          setBankQuestions(formatted);
+        } else {
+          setBankQuestions([]);
+        }
+      } catch (err) {
+        console.error("BANK_LOAD_FAILURE:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchQuestions();
+  }, [selectedSubDomain, config.id]);
 
   useEffect(() => {
     if (preLoadedDrillId) {
@@ -58,15 +96,16 @@ const ActionTerminal: React.FC<TerminalProps> = ({ preLoadedDrillId, onDrillStar
           ));
         } else {
           emitRemediationTask(
-            activeMission?.label || "Diagnostic", // 1. topic
-            score,                                // 2. score
-            selectedSubDomain || "General",       // 3. domain
-            drillId,                              // 4. drillId
-            config.id                             // 5. cert (config.id is 'AWS_SAP', etc.)
+            activeMission?.label || "Diagnostic",
+            score,
+            selectedSubDomain || "General",
+            drillId,
+            config.id
           );
         }
         setActiveMission(null);
-        setSelectedSubDomain(null); 
+        setSelectedSubDomain(null);
+        setBankQuestions([]); 
       } catch (error) {
         console.error("TELEMETRY_FAILURE:", error);
       } finally {
@@ -103,10 +142,11 @@ const ActionTerminal: React.FC<TerminalProps> = ({ preLoadedDrillId, onDrillStar
             {Object.entries(config.map).map(([key, name]) => (
               <button 
                 key={key} 
-                onClick={() => setSelectedSubDomain(name)} 
+                // Note: passing 'key' (D1, D2) or 'name' depends on how you stored it in AdminPortal
+                onClick={() => setSelectedSubDomain(key)} 
                 style={{ ...styles.domainBtn, color: config.color, borderColor: config.color + '44' }}
               >
-                [ {name.toUpperCase()} ]
+                [ {String(name).toUpperCase()} ]
               </button>
             ))}
           </div>
@@ -115,18 +155,29 @@ const ActionTerminal: React.FC<TerminalProps> = ({ preLoadedDrillId, onDrillStar
       ) : (
         <div style={{ ...styles.activeQuizContainer, borderColor: config.color + '44' }}>
           <div style={styles.quizHeader}>
-            <button onClick={() => { setActiveMission(null); setSelectedSubDomain(null); }} style={styles.abortBtn}>[ ABORT ]</button>
+            <button onClick={() => { setActiveMission(null); setSelectedSubDomain(null); setBankQuestions([]); }} style={styles.abortBtn}>[ ABORT ]</button>
             <div style={styles.targetLabel}>VAULT: {config.name} // {selectedSubDomain || activeMission.label}</div>
           </div>
-          <TacticalQuiz 
-            data={{ 
-                title: selectedSubDomain || activeMission.label, 
-                questions: [{ id: 1, text: `Initiate ${config.name} Diagnostic?`, options: ["YES", "NO"], correctAnswer: "YES", explanation: "Protocol start." }]
-            }} 
-            accent={config.color} 
-            mode="DIAGNOSTIC" 
-            onComplete={handleComplete} 
-          />
+          
+          {isLoading ? (
+            <div style={{color: config.color, padding: '20px'}}>[ ACCESSING_VAULT... ]</div>
+          ) : bankQuestions.length > 0 ? (
+            <TacticalQuiz 
+              data={{ 
+                  title: selectedSubDomain || activeMission.label, 
+                  questions: bankQuestions
+              }} 
+              accent={config.color} 
+              mode="DIAGNOSTIC" 
+              onComplete={handleComplete} 
+            />
+          ) : (
+            <div style={{padding: '20px', textAlign: 'center'}}>
+              <div style={{color: '#ff4b2b'}}>[ ERROR: SECTOR_EMPTY ]</div>
+              <div style={{fontSize: '0.7rem', color: '#666', marginTop: '10px'}}>No dynamic questions found for this domain in the QuestionBank.</div>
+              <button onClick={() => setSelectedSubDomain(null)} style={{...styles.abortBtn, marginTop: '20px'}}>[ RETURN ]</button>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -138,14 +189,14 @@ const styles = {
   menu: { display: 'flex', flexDirection: 'column' as const, gap: '20px' },
   glitchTitle: { fontSize: '0.7rem', color: '#444', letterSpacing: '2px', borderBottom: '1px solid #222', paddingBottom: '5px' },
   grid: { display: 'flex', flexDirection: 'column' as const, gap: '10px' },
-  card: { background: 'rgba(255, 255, 255, 0.02)', border: '1px solid #1a1a1a', padding: '15px', textAlign: 'left' as const, cursor: 'pointer' },
+  card: { background: 'rgba(255, 255, 255, 0.02)', border: '1px solid #1a1a1a', padding: '15px', textAlign: 'left' as const, cursor: 'pointer', width: '100%' },
   domainBtn: { background: 'rgba(255, 255, 255, 0.05)', border: '1px solid #222', padding: '12px', textAlign: 'left' as const, cursor: 'pointer', fontFamily: 'monospace', fontSize: '0.8rem' },
   cardTop: { display: 'flex', justifyContent: 'space-between', marginBottom: '5px' },
   idText: { fontSize: '0.6rem', color: '#444' },
   statusDot: { width: '6px', height: '6px', borderRadius: '50%' },
   cardLabel: { fontSize: '0.9rem', fontWeight: 'bold' as const, letterSpacing: '1px', textTransform: 'uppercase', marginBottom: '5px' },
   cardDesc: { fontSize: '0.7rem', color: '#666' },
-  activeQuizContainer: { background: '#000', border: '1px solid #222', padding: '15px' },
+  activeQuizContainer: { background: '#000', border: '1px solid #222', padding: '15px', minHeight: '400px' },
   quizHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' },
   abortBtn: { background: 'transparent', border: 'none', color: '#ff4b2b', cursor: 'pointer', fontSize: '0.7rem' },
   targetLabel: { fontSize: '0.7rem', color: '#444' }
