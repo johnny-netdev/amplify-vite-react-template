@@ -79,7 +79,23 @@ const schema = a.schema({
     allow.owner(), 
     allow.group('Admins')
   ]),
+
+  // 5. THE AI SIGNALS: Granular tracking for the Diagnostic AI
+  UserInteraction: a.model({
+    userEmail: a.string().required(),
+    moduleTitle: a.string(),
+    conceptTag: a.string(), // e.g., "RMF_PHASES", "CIA_TRIAD"
+    status: a.enum(['CORRECT', 'INCORRECT', 'STARTED']),
+    metadata: a.string(),   // Optional: specific error message or context
+    timestamp: a.datetime().required(),
+  }).authorization(allow => [
+    allow.owner(),         
+    allow.group('Admins')
+  ]),
+
+
 });
+
 
 export type Schema = ClientSchema<typeof schema>;
 

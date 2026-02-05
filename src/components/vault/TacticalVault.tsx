@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { generateClient } from 'aws-amplify/data';
 import { getUrl } from 'aws-amplify/storage';
+// ⭐️ NEW: For identifying the student
+import { getCurrentUser } from 'aws-amplify/auth'; 
 import type { Schema } from '../../../amplify/data/resource';
 import VisualRenderer from '../tactical_library/VisualRenderer';
 
@@ -19,7 +21,7 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
   const [selectedVisual, setSelectedVisual] = useState<any | null>(null);
   const [activeUrl, setActiveUrl] = useState<string | null>(null);
 
-  // ⭐️ Safe Live Observer
+  // 1. Safe Live Observer (STAYS SAME)
   useEffect(() => {
     const targetModel = (client.models as any)[model];
     if (!targetModel) return;
@@ -32,7 +34,7 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
     return () => sub.unsubscribe();
   }, [model]);
 
-  // Handle S3 URL Generation for LEGACY types
+  // 2. Handle S3 URL Generation (STAYS SAME)
   useEffect(() => {
     if (selectedVisual?.type === 'LEGACY' && selectedVisual?.s3Path) {
       getUrl({ path: selectedVisual.s3Path })
@@ -43,23 +45,47 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
     }
   }, [selectedVisual]);
 
-  // ⭐️ CRITICAL FIX: Safe Content Parsing
-  // This prevents the "Blank Screen" by catching parse errors before they hit the renderer
+  // ⭐️ 3. NEW: TELEMETRY INTERCOM (AI SIGNALS)
+  // This listens for "messages" from the iFrames and saves them to the DB
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      if (event.data?.type === 'VAULT_TELEMETRY') {
+        const { concept, isCorrect, detail } = event.data.payload;
+
+        try {
+          const { userId, signInDetails } = await getCurrentUser();
+          const userEmail = signInDetails?.loginId || userId;
+
+          await client.models.UserInteraction.create({
+            userEmail: userEmail,
+            moduleTitle: selectedVisual?.title || "UNKNOWN_MODULE",
+            conceptTag: concept,
+            status: isCorrect ? 'CORRECT' : 'INCORRECT',
+            metadata: detail || "",
+            timestamp: new Date().toISOString()
+          });
+
+          console.log(`[AI_SIGNAL_CAPTURED]: ${concept} for ${userEmail}`);
+        } catch (err) {
+          console.error("FAILED_TO_LOG_AI_SIGNAL:", err);
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [selectedVisual]); // We re-bind when the selected visual changes to ensure correct titles
+
+  // 4. Safe Content Parsing (STAYS SAME)
   const safeContent = useMemo(() => {
     if (!selectedVisual) return null;
-
-    if (selectedVisual.type === 'LEGACY') {
-      return activeUrl; // Returns the signed S3 URL
-    }
+    if (selectedVisual.type === 'LEGACY') return activeUrl;
 
     try {
-      if (!selectedVisual.config) {
-        return { questions: [], error: "MISSING_CONFIG" };
-      }
+      if (!selectedVisual.config) return { questions: [], error: "MISSING_CONFIG" };
       return JSON.parse(selectedVisual.config);
     } catch (e) {
       console.error("VAULT_JSON_PARSE_ERROR:", e);
-      // Return a structural fallback instead of crashing
       return { 
         questions: [{ id: 'err', text: "CORRUPT_JSON_DATA_MODEL", options: [], correctAnswer: '' }], 
         isError: true 
@@ -67,7 +93,7 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
     }
   }, [selectedVisual, activeUrl]);
 
-  // Normalized Domains Safety Check
+  // Normalized Domains Safety Check (STAYS SAME)
   const getNormalizedDomains = (): [string, string][] => {
     if (!domainMap) return [];
     if (Array.isArray(domainMap)) {
@@ -80,7 +106,7 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
 
   return (
     <div style={s.layout}>
-      {/* SIDEBAR */}
+      {/* ... (The rest of your JSX remains exactly the same) ... */}
       <aside style={s.sidebar}>
         <h3 style={s.sidebarHeader}>{title}</h3>
         {domains.map(([key, label]) => {
@@ -114,7 +140,6 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
         })}
       </aside>
 
-      {/* MAIN VIEWPORT */}
       <main style={s.main}>
         {selectedVisual ? (
           <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -129,7 +154,6 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
             </div>
             
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-              {/* Only render if we have parsed content or a URL */}
               {safeContent ? (
                 <VisualRenderer 
                   key={`${selectedVisual.id}`}
@@ -153,11 +177,9 @@ const TacticalVault: React.FC<VaultProps> = ({ title, domainMap, domainColors, a
 };
 
 const s = {
+  // ... (Your existing styles remain exactly the same) ...
   layout: { display: 'flex', gap: '2rem', height: '82vh', marginTop: '1rem', width: '100%' },
-  sidebar: { 
-    width: '380px', background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(12px)',
-    padding: '1.5rem', borderRadius: '12px', overflowY: 'auto' as const, border: '1px solid rgba(255, 255, 255, 0.1)'
-  },
+  sidebar: { width: '380px', background: 'rgba(10, 10, 10, 0.7)', backdropFilter: 'blur(12px)', padding: '1.5rem', borderRadius: '12px', overflowY: 'auto' as const, border: '1px solid rgba(255, 255, 255, 0.1)' },
   sidebarHeader: { fontSize: '0.7rem', letterSpacing: '2px', color: '#666', marginBottom: '1.5rem', borderBottom: '1px solid #333', paddingBottom: '0.5rem', fontFamily: 'monospace' },
   details: { marginBottom: '0.8rem', cursor: 'pointer' },
   summary: { listStyle: 'none', padding: '12px', background: 'rgba(34, 34, 34, 0.4)', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', fontWeight: 'bold', color: '#eee' },
