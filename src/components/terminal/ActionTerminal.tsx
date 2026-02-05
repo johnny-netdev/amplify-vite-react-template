@@ -38,6 +38,8 @@ const ActionTerminal: React.FC<TerminalProps> = ({ preLoadedDrillId, onDrillStar
   useEffect(() => {
     const fetchQuestions = async () => {
       if (!selectedSubDomain) return;
+
+      console.log(`[ARIES_QUERY]: Searching for Cert: ${config.id}, Domain: ${selectedSubDomain}`);
       
       setIsLoading(true);
       try {
