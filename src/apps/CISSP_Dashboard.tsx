@@ -24,7 +24,6 @@ interface DashboardProps {
 
 const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillStarted }) => {
   const [activities, setActivities] = useState<Schema['UserActivity']['type'][]>([]);
-  // ⭐️ NEW: State for ARIES challenge
   const [activeChallenge, setActiveChallenge] = useState<any>(null);
 
   useEffect(() => {
@@ -36,8 +35,10 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
   
   const { insights, getAriesChallenge, refresh } = useDiagnosticEngine();
 
-  // ⭐️ NEW: Check for weak spots on load or when insights update
+  // ⭐️ INTEGRATED: ARIES Trigger Logic
+  // This effect forces ARIES to check for challenges whenever activities update
   useEffect(() => {
+    // Check if we have any interactions (points) and no current challenge active
     if (insights.totalPoints > 0 && !activeChallenge) {
       const challenge = getAriesChallenge();
       if (challenge) {
@@ -45,11 +46,10 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
         setActiveChallenge(challenge);
       }
     }
-  }, [insights, getAriesChallenge]);
+  }, [insights, getAriesChallenge, activities]); // Added activities to dependency to re-check on quiz finish
 
   const handleAriesResolve = (summary: string) => {
     console.log("ARIES // REBUTTAL_LOGGED:", summary);
-    // In prod, you'd save this summary to a "Reflections" table
     setActiveChallenge(null);
   };
 
@@ -81,11 +81,17 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
       const fullName = CISSP_DOMAIN_MAP[domainKey as keyof typeof CISSP_DOMAIN_MAP];
       const displayLabel = fullName || domainKey.replace(/_/g, ' ');
 
+      // ⭐️ INTEGRATED: AGGRESSIVE STATUS THRESHOLD
+      // If score is 100 = OPTIMAL. Anything less = CRITICAL for ARIES activation.
+      let currentStatus: 'OPTIMAL' | 'DEGRADED' | 'CRITICAL' = 'OPTIMAL';
+      if (avg < 100 && avg >= 85) currentStatus = 'DEGRADED';
+      if (avg < 85 || (scores.length > 0 && avg < 100)) currentStatus = 'CRITICAL';
+
       return {
         id: domainKey,
         label: displayLabel,
         score: Math.round(avg),
-        status: avg >= 80 ? 'OPTIMAL' : avg >= 60 ? 'DEGRADED' : 'CRITICAL'
+        status: currentStatus
       };
     });
     
@@ -98,7 +104,7 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
 
   return (
     <div style={styles.dashboardWrapper}>
-      {/* ⭐️ NEW: Render ARIES Gatekeeper if a challenge is active */}
+      {/* ARIES Gatekeeper Popup */}
       {activeChallenge && (
         <AIGatekeeper 
           challenge={activeChallenge} 
@@ -136,7 +142,9 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
           {stats.domains.map((d, i) => (
             <div key={d.id} style={{
               ...styles.domainCard, 
-              borderLeft: `4px solid ${DOMAIN_COLORS[d.id] || '#333'}`
+              borderLeft: `4px solid ${DOMAIN_COLORS[d.id] || '#333'}`,
+              // Highlight critical sectors with a subtle glow
+              boxShadow: d.status === 'CRITICAL' ? 'inset 0 0 10px rgba(255, 75, 43, 0.1)' : 'none'
             }}>
               <div style={styles.domainInfo}>
                 <span style={styles.domainNum}>SECTOR_0{i+1}</span>
@@ -144,8 +152,8 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
               </div>
               <div style={{
                 ...styles.status, 
-                borderColor: DOMAIN_COLORS[d.id] || '#333', 
-                color: DOMAIN_COLORS[d.id] || '#333'
+                borderColor: d.status === 'CRITICAL' ? '#ff4b2b' : DOMAIN_COLORS[d.id], 
+                color: d.status === 'CRITICAL' ? '#ff4b2b' : DOMAIN_COLORS[d.id]
               }}>
                 {d.score}% {d.status}
               </div>
@@ -157,7 +165,6 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
       <div style={styles.rightColumn}>
         <ActionTerminal 
            preLoadedDrillId={preLoadedDrillId} 
-           // ⭐️ Refresh the engine when drills finish
            onDrillStarted={() => {
              if (onDrillStarted) onDrillStarted();
              refresh();
