@@ -2,7 +2,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { client } from '../amplify-client'; 
 import type { Schema } from '../../amplify/data/resource';
 import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
-import ActionTerminal from '../components/terminal/ActionTerminal'; // 🔥 Import the engine
+import ActionTerminal from '../components/terminal/ActionTerminal';
+import { useDiagnosticEngine } from '../utils/useDiagnosticEngine';
+
 
 const DOMAIN_WEIGHTS: Record<string, number> = {
   RISK_MGMT: 0.15, 
@@ -30,6 +32,16 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
     });
     return () => sub.unsubscribe();
   }, []);
+  
+  const { insights } = useDiagnosticEngine();
+  useEffect(() => {
+  if (insights.totalPoints > 0) {
+    console.log("--- BRAIN DIAGNOSTIC REPORT ---");
+    console.log("Weak Spots:", insights.weakSpots);
+    console.log("Atrophy Risks:", insights.atrophyRisk);
+    console.log("Total Data Points:", insights.totalPoints);
+  }
+}, [insights]);
 
   const stats = useMemo(() => {
     const domainScores: Record<string, number[]> = {};
