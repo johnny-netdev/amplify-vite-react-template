@@ -1,4 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { generateClient } from 'aws-amplify/data'; //Imports for the AI Brain Telemetry
+import { getCurrentUser } from 'aws-amplify/auth';
+import type { Schema } from '../../../amplify/data/resource';
+
+const client = generateClient<Schema>();
 
 interface Option {
   id: string;
@@ -41,7 +46,8 @@ const TacticalQuiz: React.FC<TacticalQuizProps> = ({ data, accent = "#00ff41", m
     hasReported.current = false;
   }, [data]);
 
-  const handleAnswer = (optionId: string) => {
+  //handleAnswer reports to the AI Brain
+  const handleAnswer = async (optionId: string) => {
     if (selectedOption) return; 
 
     const currentQ = data.questions[currentQuestion];
@@ -54,7 +60,25 @@ const TacticalQuiz: React.FC<TacticalQuizProps> = ({ data, accent = "#00ff41", m
       setScore(prev => prev + 1);
     }
 
-    // ⭐️ Logic Update: In DIAGNOSTIC mode, auto-advance if user shouldn't see feedback
+    // --- TELEMETRY INJECTION ---
+    try {
+      const { userId, signInDetails } = await getCurrentUser();
+      const userEmail = signInDetails?.loginId || userId;
+
+      await client.models.UserInteraction.create({
+        userEmail: userEmail,
+        moduleTitle: data.title || "QUIZ_ENGINE",
+        conceptTag: String(currentQ.id).startsWith('q-') ? data.title : String(currentQ.id),
+        status: correct ? 'CORRECT' : 'INCORRECT',
+        metadata: `Mode: ${mode} | Question: ${currentQ.text.substring(0, 50)}...`,
+        timestamp: new Date().toISOString()
+      });
+      console.log(`[QUIZ_TELEMETRY]: Logged ${correct ? 'SUCCESS' : 'FAILURE'} for ${data.title}`);
+    } catch (err) {
+      console.error("[QUIZ_TELEMETRY_ERROR]:", err);
+    }
+    // ---------------------------
+
     if (mode === 'DIAGNOSTIC') {
         setTimeout(() => handleNext(), 800);
     }
@@ -102,7 +126,6 @@ const TacticalQuiz: React.FC<TacticalQuizProps> = ({ data, accent = "#00ff41", m
               
               const isThisSelected = selectedOption === optId;
               
-              // ⭐️ UI Fix: Only show red/green borders in PRACTICE mode
               const borderCol = isThisSelected && mode === 'PRACTICE' 
                 ? (isCorrect ? '#00ff41' : '#ff4b2b') 
                 : (isThisSelected ? accent : '#222');
@@ -125,7 +148,6 @@ const TacticalQuiz: React.FC<TacticalQuizProps> = ({ data, accent = "#00ff41", m
             })}
           </div>
 
-          {/* ⭐️ Logic Update: Hide feedback/explanation if in DIAGNOSTIC mode */}
           {selectedOption && mode === 'PRACTICE' && (
             <div style={{...s.feedback, borderColor: isCorrect ? '#00ff4133' : '#ff4b2b33'}}>
               <div style={{ color: isCorrect ? '#00ff41' : '#ff4b2b', marginBottom: '10px', fontSize: '0.8rem' }}>
