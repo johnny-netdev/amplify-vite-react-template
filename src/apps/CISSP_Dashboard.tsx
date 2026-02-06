@@ -4,7 +4,7 @@ import type { Schema } from '../../amplify/data/resource';
 import { CISSP_DOMAIN_MAP, DOMAIN_COLORS } from '../cissp/constant';
 import ActionTerminal from '../components/terminal/ActionTerminal';
 import { useDiagnosticEngine } from '../utils/useDiagnosticEngine';
-import AIGatekeeper from '../components/ai/AIGatekeeper'; //ARIES UI
+import AIGatekeeper from '../components/ai/AIGatekeeper'; 
 
 const DOMAIN_WEIGHTS: Record<string, number> = {
   RISK_MGMT: 0.15, 
@@ -26,95 +26,103 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
   const [activities, setActivities] = useState<Schema['UserActivity']['type'][]>([]);
   const [activeChallenge, setActiveChallenge] = useState<any>(null);
 
-  // 1. Listen for Activity updates
   useEffect(() => {
     const sub = client.models.UserActivity.observeQuery().subscribe({
-      next: ({ items }) => setActivities([...items]),
+      next: ({ items }) => {
+        setActivities([...items]);
+      },
+      error: (err) => console.error("SUBSCRIPTION_ERROR:", err)
     });
     return () => sub.unsubscribe();
   }, []);
   
   const { insights, getAriesChallenge, refresh } = useDiagnosticEngine();
 
-  // 2. Calculate Stats (Memoized)
   const stats = useMemo(() => {
     const domainScores: Record<string, number[]> = {};
     let totalDuration = 0;
-    Object.keys(DOMAIN_WEIGHTS).forEach(d => domainScores[d] = []);
+    
+    Object.keys(DOMAIN_WEIGHTS).forEach(d => {
+      domainScores[d] = [];
+    });
 
     activities.forEach(act => {
-      const sanitizedKey = act.domain.toUpperCase().replace(/\s/g, '_');
-      let targetKey = sanitizedKey;
-      if (sanitizedKey === 'SEC_ASSESS') targetKey = 'SEC_ASSESS_TEST';
-      if (sanitizedKey === 'SOFT_DEV_SEC') targetKey = 'SOFTWARE_DEV_SEC';
+      const dbKey = (act.domain || '').toUpperCase().replace(/\s/g, '_');
+      let targetKey = dbKey;
+      
+      if (dbKey.includes('RISK')) targetKey = 'RISK_MGMT';
+      else if (dbKey.includes('ASSET')) targetKey = 'ASSET_SEC';
+      else if (dbKey.includes('ARCH') || dbKey.includes('ENG')) targetKey = 'SEC_ARCH_ENG';
+      else if (dbKey.includes('COMM') || dbKey.includes('NET')) targetKey = 'COMM_NET_SEC';
+      else if (dbKey.includes('IAM') || dbKey.includes('IDENTITY')) targetKey = 'IAM';
+      else if (dbKey.includes('ASSESS') || dbKey.includes('TEST')) targetKey = 'SEC_ASSESS_TEST';
+      else if (dbKey.includes('OPS') || dbKey.includes('OPERATIONS')) targetKey = 'SEC_OPS';
+      else if (dbKey.includes('SOFT') || dbKey.includes('DEV')) targetKey = 'SOFTWARE_DEV_SEC';
 
       if (domainScores[targetKey]) {
         domainScores[targetKey].push(act.score);
       }
-      
-      const isRecent = new Date(act.timestamp) > new Date(Date.now() - 24 * 60 * 60 * 1000);
-      if (isRecent) totalDuration += act.duration;
+      totalDuration += (act.duration || 0);
     });
 
-    let weightedReadiness = 0;
+    let weightedSum = 0;
     const domainIntegrity = Object.keys(DOMAIN_WEIGHTS).map(domainKey => {
-      const scores = domainScores[domainKey];
-      const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
-      weightedReadiness += avg * (DOMAIN_WEIGHTS[domainKey]); 
+      const scores = domainScores[domainKey] || [];
+      const hasData = scores.length > 0;
+      const avg = hasData ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+      
+      weightedSum += avg * (DOMAIN_WEIGHTS[domainKey]); 
 
-      const fullName = CISSP_DOMAIN_MAP[domainKey as keyof typeof CISSP_DOMAIN_MAP];
-      const displayLabel = fullName || domainKey.replace(/_/g, ' ');
-
-      let currentStatus: 'OPTIMAL' | 'DEGRADED' | 'CRITICAL' = 'OPTIMAL';
-      if (scores.length > 0) {
-        if (avg === 100) currentStatus = 'OPTIMAL';
-        else if (avg >= 85) currentStatus = 'DEGRADED';
-        else currentStatus = 'CRITICAL';
+      const anyFailures = scores.some(s => s < 100);
+      let status: 'OPTIMAL' | 'DEGRADED' | 'CRITICAL' = 'OPTIMAL';
+      
+      if (hasData) {
+        if (anyFailures || avg < 85) status = 'CRITICAL';
+        else if (avg < 100) status = 'DEGRADED';
       }
 
       return {
         id: domainKey,
-        label: displayLabel,
+        label: CISSP_DOMAIN_MAP[domainKey as keyof typeof CISSP_DOMAIN_MAP] || domainKey,
         score: Math.round(avg),
-        status: currentStatus
+        status: status,
+        hasData
       };
     });
     
     return { 
-        readiness: Math.round(weightedReadiness), 
+        readiness: Math.round(weightedSum), 
         domains: domainIntegrity,
+        totalLogs: activities.length,
         fatigueMins: Math.round(totalDuration / 60) 
     };
   }, [activities]);
 
-  // 3. ARIES Trigger Logic (Moved after stats definition)
   useEffect(() => {
     if (activeChallenge) return;
 
     const criticalSector = stats.domains.find(d => d.status === 'CRITICAL');
 
-    if (criticalSector && insights.totalPoints > 0) {
-      console.log(`[ARIES_SENSOR]: Detecting instability in ${criticalSector.label}`);
-      
-      const challenge = getAriesChallenge();
-      
-      if (challenge) {
-        setActiveChallenge(challenge);
+    if (criticalSector && stats.totalLogs > 0) {
+      const engineChallenge = getAriesChallenge();
+      if (engineChallenge) {
+        setActiveChallenge(engineChallenge);
       } else {
-        console.warn("[ARIES_SENSOR]: Engine silent. Forcing manual manifestation.");
         setActiveChallenge({
+          fallacyType: 'STABILITY_ALERT',
+          strawMan: `Sector ${criticalSector.label} failure detected. Score: ${criticalSector.score}%. Provide impact summary.`,
           topic: criticalSector.label,
-          difficulty: 'HIGH',
-          reason: 'CRITICAL_VULNERABILITY_THRESHOLD_CROSSED',
-          domain: criticalSector.id
+          reason: 'MANUAL_WATCHDOG_TRIGGER',
+          options: [] 
         });
       }
     }
-  }, [stats.domains, activeChallenge, getAriesChallenge, insights.totalPoints]);
+  }, [stats, activeChallenge, getAriesChallenge]);
 
   const handleAriesResolve = (summary: string) => {
-    console.log("ARIES // REBUTTAL_LOGGED:", summary);
+    console.log("ARIES_RESOLVED:", summary);
     setActiveChallenge(null);
+    refresh();
   };
 
   return (
@@ -132,7 +140,7 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
           <div style={styles.burnoutMonitor}>
             <span style={styles.label}>OPERATOR_LOAD:</span>
             <span style={{...styles.value, color: stats.fatigueMins > 120 ? '#ff4b2b' : '#00ff41'}}>
-              {stats.fatigueMins} MINS {stats.fatigueMins > 120 ? '[OVERLOAD]' : '[STABLE]'}
+              {stats.fatigueMins} MINS
             </span>
           </div>
         </header>
@@ -147,8 +155,8 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
           </div>
           <div style={styles.metricCard}>
             <div style={styles.metricLabel}>ENGAGEMENT_LOGS</div>
-            <div style={styles.metricValue}>{insights.totalPoints}</div>
-            <div style={styles.footer}>Granular Interaction Signals</div>
+            <div style={styles.metricValue}>{stats.totalLogs}</div>
+            <div style={styles.footer}>Active Telemetry Stream</div>
           </div>
         </div>
 
@@ -156,19 +164,23 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
           {stats.domains.map((d, i) => (
             <div key={d.id} style={{
               ...styles.domainCard, 
-              borderLeft: `4px solid ${DOMAIN_COLORS[d.id] || '#333'}`,
-              boxShadow: d.status === 'CRITICAL' ? 'inset 0 0 15px rgba(255, 75, 43, 0.15)' : 'none',
+              borderLeft: `4px solid ${d.status === 'CRITICAL' ? '#ff4b2b' : (DOMAIN_COLORS[d.id] || '#333')}`,
+              background: d.status === 'CRITICAL' ? 'rgba(255, 75, 43, 0.05)' : 'rgba(5, 5, 5, 0.8)',
               borderColor: d.status === 'CRITICAL' ? '#ff4b2b' : '#222'
             }}>
               <div style={styles.domainInfo}>
                 <span style={styles.domainNum}>SECTOR_0{i+1}</span>
-                <span style={styles.domainName}>{d.label.toUpperCase()}</span>
+                <span style={{ 
+                  ...styles.domainName, 
+                  color: d.status === 'CRITICAL' ? '#ff4b2b' : '#aaa' 
+                }}>
+                  {d.label.toUpperCase()}
+                </span>
               </div>
               <div style={{
                 ...styles.status, 
-                borderColor: d.status === 'CRITICAL' ? '#ff4b2b' : DOMAIN_COLORS[d.id], 
-                color: d.status === 'CRITICAL' ? '#ff4b2b' : DOMAIN_COLORS[d.id],
-                background: d.status === 'CRITICAL' ? 'rgba(255, 75, 43, 0.05)' : 'transparent'
+                borderColor: d.status === 'CRITICAL' ? '#ff4b2b' : (DOMAIN_COLORS[d.id] || '#333'), 
+                color: d.status === 'CRITICAL' ? '#ff4b2b' : (DOMAIN_COLORS[d.id] || '#333')
               }}>
                 {d.score}% {d.status}
               </div>
@@ -213,10 +225,10 @@ const styles = {
   progressFill: { height: '100%', background: '#00ff41' },
   footer: { fontSize: '0.6rem', color: '#444', marginTop: '10px' },
   domainGrid: { display: 'grid' as const, gridTemplateColumns: '1fr', gap: '10px' },
-  domainCard: { border: '1px solid #222', padding: '15px', display: 'flex' as const, justifyContent: 'space-between', alignItems: 'center', background: 'rgba(5, 5, 5, 0.8)', transition: 'all 0.3s ease' },
+  domainCard: { border: '1px solid #222', padding: '15px', display: 'flex' as const, justifyContent: 'space-between', alignItems: 'center', transition: 'all 0.3s ease' },
   domainInfo: { display: 'flex' as const, flexDirection: 'column' as const, maxWidth: '70%' },
   domainNum: { fontSize: '0.6rem', color: '#444' },
-  domainName: { fontSize: '0.85rem', color: '#aaa', letterSpacing: '1px' },
+  domainName: { fontSize: '0.85rem', letterSpacing: '1px' },
   status: { fontSize: '0.7rem', border: '1px solid', padding: '4px 10px', whiteSpace: 'nowrap' as const },
 };
 
