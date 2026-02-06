@@ -71,10 +71,13 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
   const stats = useMemo(() => {
     const domainScores: Record<string, number[]> = {};
     let totalDuration = 0;
+    
+    // Initialize scores
     Object.keys(DOMAIN_WEIGHTS).forEach(d => domainScores[d] = []);
 
     activities.forEach(act => {
-      const sanitizedKey = act.domain.toUpperCase().replace(/\s/g, '_');
+      // Normalize keys from DB to match our constants
+      const sanitizedKey = (act.domain || '').toUpperCase().replace(/\s/g, '_');
       let targetKey = sanitizedKey;
       if (sanitizedKey === 'SEC_ASSESS') targetKey = 'SEC_ASSESS_TEST';
       if (sanitizedKey === 'SOFT_DEV_SEC') targetKey = 'SOFTWARE_DEV_SEC';
@@ -91,16 +94,20 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
     const domainIntegrity = Object.keys(DOMAIN_WEIGHTS).map(domainKey => {
       const scores = domainScores[domainKey];
       const avg = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : 0;
+      
+      // Calculate readiness contribution
       weightedReadiness += avg * (DOMAIN_WEIGHTS[domainKey]); 
 
+      // Get display label safely
       const fullName = CISSP_DOMAIN_MAP[domainKey as keyof typeof CISSP_DOMAIN_MAP];
-      const displayLabel = fullName || domainKey.replace(/_/g, ' ');
 
       return {
         id: domainKey,
-        label: displayLabel,
+        label: fullName || domainKey.replace(/_/g, ' '),
         score: Math.round(avg),
-        status: avg >= 80 ? 'OPTIMAL' : avg >= 60 ? 'DEGRADED' : 'CRITICAL'
+        // A domain is CRITICAL if they have scores but the average is below 70
+        status: (scores.length > 0 && avg < 70) ? 'CRITICAL' : (avg >= 80 ? 'OPTIMAL' : avg >= 60 ? 'DEGRADED' : 'STABLE'),
+        isCritical: scores.length > 0 && avg < 70
       };
     });
     
