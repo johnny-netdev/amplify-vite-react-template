@@ -16,7 +16,6 @@ const CISSPDashboard: React.FC<{ preLoadedDrillId?: string | null; onDrillStarte
   const [activeChallenge, setActiveChallenge] = useState<any>(null);
   const { getAriesChallenge, refresh } = useDiagnosticEngine();
 
-  // 1. Sync Data
   useEffect(() => {
     const sub = client.models.UserActivity.observeQuery().subscribe({
       next: ({ items }) => setActivities([...items]),
@@ -24,7 +23,6 @@ const CISSPDashboard: React.FC<{ preLoadedDrillId?: string | null; onDrillStarte
     return () => sub.unsubscribe();
   }, []);
 
-  // 2. Compute Stats (Stable Logic)
   const { domains, totalLogs, readiness, fatigueMins } = useMemo(() => {
     const scores: Record<string, number[]> = {};
     Object.keys(DOMAIN_WEIGHTS).forEach(d => scores[d] = []);
@@ -62,7 +60,6 @@ const CISSPDashboard: React.FC<{ preLoadedDrillId?: string | null; onDrillStarte
     return { domains: items, totalLogs: activities.length, readiness: Math.round(weighted), fatigueMins: Math.round(duration / 60) };
   }, [activities]);
 
-  // 3. THE WATCHDOG (Now using primitive trigger)
   const criticalCount = domains.filter(d => d.status === 'CRITICAL').length;
 
   useEffect(() => {
@@ -83,12 +80,11 @@ const CISSPDashboard: React.FC<{ preLoadedDrillId?: string | null; onDrillStarte
 
   return (
     <div style={styles.dashboardWrapper}>
-      {/* ⭐️ Z-INDEX WRAPPER: Ensures the modal is physically on top of everything */}
       {activeChallenge && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 9999, background: 'rgba(0,0,0,0.85)' }}>
           <AIGatekeeper 
             challenge={activeChallenge} 
-            onResolve={(s) => { setActiveChallenge(null); refresh(); }} 
+            onResolve={() => { setActiveChallenge(null); refresh(); }} 
           />
         </div>
       )}
@@ -111,7 +107,7 @@ const CISSPDashboard: React.FC<{ preLoadedDrillId?: string | null; onDrillStarte
         </div>
 
         <div style={styles.domainGrid}>
-          {domains.map((d, i) => (
+          {domains.map((d) => (
             <div key={d.id} style={{
               ...styles.domainCard, 
               borderLeft: `4px solid ${d.status === 'CRITICAL' ? '#ff4b2b' : (DOMAIN_COLORS[d.id] || '#333')}`,
@@ -143,8 +139,7 @@ const styles = {
   metricLabel: { fontSize: '0.7rem', color: '#444' },
   metricValue: { fontSize: '1.5rem', color: '#00ff41' },
   domainGrid: { display: 'flex' as const, flexDirection: 'column' as const, gap: '8px' },
-  domainCard: { background: '#050505', border: '1px solid #222', padding: '12px', display: 'flex' as const, justifyContent: 'space-between', fontSize: '0.8rem' },
-  status: { fontSize: '0.7rem' }
+  domainCard: { background: '#050505', border: '1px solid #222', padding: '12px', display: 'flex' as const, justifyContent: 'space-between', fontSize: '0.8rem' }
 };
 
 export default CISSPDashboard;
