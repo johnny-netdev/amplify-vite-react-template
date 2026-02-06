@@ -36,7 +36,8 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
     return () => sub.unsubscribe();
   }, []);
   
-  const { insights, getAriesChallenge, refresh } = useDiagnosticEngine();
+  // ⭐️ FIXED: Removed 'insights' to resolve TS6133 build error
+  const { getAriesChallenge, refresh } = useDiagnosticEngine();
 
   const stats = useMemo(() => {
     const domainScores: Record<string, number[]> = {};
