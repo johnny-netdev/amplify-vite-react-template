@@ -13,19 +13,32 @@ export const useDiagnosticEngine = () => {
   }>({ weakSpots: [], atrophyRisk: [], totalPoints: 0 });
 
   const analyzeData = async () => {
-    const { data: items } = await client.models.UserInteraction.list();
+    const { data: items } = await client.models.UserActivity.list();
     const now = new Date();
     const stats: Record<string, { correct: number; total: number; lastSeen: Date }> = {};
 
     items.forEach(item => {
-      const tag = item.conceptTag || 'UNKNOWN';
+      const tag = item.domain || 'UNKNOWN';
+      
       if (!stats[tag]) {
-        stats[tag] = { correct: 0, total: 0, lastSeen: new Date(item.timestamp) };
+        stats[tag] = { 
+          correct: 0, 
+          total: 0, 
+          lastSeen: item.timestamp ? new Date(item.timestamp) : new Date() 
+        };
       }
+      
       stats[tag].total += 1;
-      if (item.status === 'CORRECT') stats[tag].correct += 1;
-      const itemDate = new Date(item.timestamp);
-      if (itemDate > stats[tag].lastSeen) stats[tag].lastSeen = itemDate;
+      
+      // FIX: Use 'score' to determine if this was a "success"
+      // If a domain quiz was < 70%, we count it as a failure for that domain
+      if (item.score && item.score >= 70) {
+        stats[tag].correct += 1;
+      }
+
+      if (item.timestamp && new Date(item.timestamp) > stats[tag].lastSeen) {
+        stats[tag].lastSeen = new Date(item.timestamp);
+      }
     });
 
     const weakSpots = Object.keys(stats).filter(tag => 
@@ -40,7 +53,6 @@ export const useDiagnosticEngine = () => {
     setInsights({ weakSpots, atrophyRisk, totalPoints: items.length });
   };
 
-  // ⭐️ NEW: The Summoner Function
   const getAriesChallenge = () => {
     if (insights.weakSpots.length === 0) return null;
     
@@ -48,7 +60,9 @@ export const useDiagnosticEngine = () => {
     const primaryTarget = insights.weakSpots[0];
     
     // Find a matching challenge in our JSON vault
-    const challenge = vaultData.challenges.find(c => c.topic === primaryTarget);
+    const challenge = vaultData.challenges.find(c => c.topic === primaryTarget) 
+                      || vaultData.challenges.find(c => c.fallacyType === 'STABILITY_CHECK')
+                      || vaultData.challenges[0]; // Absolute fallback
     
     return challenge || null;
   };
