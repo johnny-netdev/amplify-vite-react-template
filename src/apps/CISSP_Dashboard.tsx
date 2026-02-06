@@ -26,6 +26,7 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
   const [activities, setActivities] = useState<Schema['UserActivity']['type'][]>([]);
   const [activeChallenge, setActiveChallenge] = useState<any>(null);
 
+  // 1. Listen for Activity updates
   useEffect(() => {
     const sub = client.models.UserActivity.observeQuery().subscribe({
       next: ({ items }) => setActivities([...items]),
@@ -35,24 +36,7 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
   
   const { insights, getAriesChallenge, refresh } = useDiagnosticEngine();
 
-  // ⭐️ INTEGRATED: ARIES Trigger Logic
-  // This effect forces ARIES to check for challenges whenever activities update
-  useEffect(() => {
-    // Check if we have any interactions (points) and no current challenge active
-    if (insights.totalPoints > 0 && !activeChallenge) {
-      const challenge = getAriesChallenge();
-      if (challenge) {
-        console.log("ARIES // INTERCEPT_TRIGGERED:", challenge.topic);
-        setActiveChallenge(challenge);
-      }
-    }
-  }, [insights, getAriesChallenge, activities]); // Added activities to dependency to re-check on quiz finish
-
-  const handleAriesResolve = (summary: string) => {
-    console.log("ARIES // REBUTTAL_LOGGED:", summary);
-    setActiveChallenge(null);
-  };
-
+  // 2. Calculate Stats (Memoized)
   const stats = useMemo(() => {
     const domainScores: Record<string, number[]> = {};
     let totalDuration = 0;
@@ -81,11 +65,12 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
       const fullName = CISSP_DOMAIN_MAP[domainKey as keyof typeof CISSP_DOMAIN_MAP];
       const displayLabel = fullName || domainKey.replace(/_/g, ' ');
 
-      // ⭐️ INTEGRATED: AGGRESSIVE STATUS THRESHOLD
-      // If score is 100 = OPTIMAL. Anything less = CRITICAL for ARIES activation.
       let currentStatus: 'OPTIMAL' | 'DEGRADED' | 'CRITICAL' = 'OPTIMAL';
-      if (avg < 100 && avg >= 85) currentStatus = 'DEGRADED';
-      if (avg < 85 || (scores.length > 0 && avg < 100)) currentStatus = 'CRITICAL';
+      if (scores.length > 0) {
+        if (avg === 100) currentStatus = 'OPTIMAL';
+        else if (avg >= 85) currentStatus = 'DEGRADED';
+        else currentStatus = 'CRITICAL';
+      }
 
       return {
         id: domainKey,
@@ -102,9 +87,38 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
     };
   }, [activities]);
 
+  // 3. ARIES Trigger Logic (Moved after stats definition)
+  useEffect(() => {
+    if (activeChallenge) return;
+
+    const criticalSector = stats.domains.find(d => d.status === 'CRITICAL');
+
+    if (criticalSector && insights.totalPoints > 0) {
+      console.log(`[ARIES_SENSOR]: Detecting instability in ${criticalSector.label}`);
+      
+      const challenge = getAriesChallenge();
+      
+      if (challenge) {
+        setActiveChallenge(challenge);
+      } else {
+        console.warn("[ARIES_SENSOR]: Engine silent. Forcing manual manifestation.");
+        setActiveChallenge({
+          topic: criticalSector.label,
+          difficulty: 'HIGH',
+          reason: 'CRITICAL_VULNERABILITY_THRESHOLD_CROSSED',
+          domain: criticalSector.id
+        });
+      }
+    }
+  }, [stats.domains, activeChallenge, getAriesChallenge, insights.totalPoints]);
+
+  const handleAriesResolve = (summary: string) => {
+    console.log("ARIES // REBUTTAL_LOGGED:", summary);
+    setActiveChallenge(null);
+  };
+
   return (
     <div style={styles.dashboardWrapper}>
-      {/* ARIES Gatekeeper Popup */}
       {activeChallenge && (
         <AIGatekeeper 
           challenge={activeChallenge} 
@@ -143,8 +157,8 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
             <div key={d.id} style={{
               ...styles.domainCard, 
               borderLeft: `4px solid ${DOMAIN_COLORS[d.id] || '#333'}`,
-              // Highlight critical sectors with a subtle glow
-              boxShadow: d.status === 'CRITICAL' ? 'inset 0 0 10px rgba(255, 75, 43, 0.1)' : 'none'
+              boxShadow: d.status === 'CRITICAL' ? 'inset 0 0 15px rgba(255, 75, 43, 0.15)' : 'none',
+              borderColor: d.status === 'CRITICAL' ? '#ff4b2b' : '#222'
             }}>
               <div style={styles.domainInfo}>
                 <span style={styles.domainNum}>SECTOR_0{i+1}</span>
@@ -153,7 +167,8 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
               <div style={{
                 ...styles.status, 
                 borderColor: d.status === 'CRITICAL' ? '#ff4b2b' : DOMAIN_COLORS[d.id], 
-                color: d.status === 'CRITICAL' ? '#ff4b2b' : DOMAIN_COLORS[d.id]
+                color: d.status === 'CRITICAL' ? '#ff4b2b' : DOMAIN_COLORS[d.id],
+                background: d.status === 'CRITICAL' ? 'rgba(255, 75, 43, 0.05)' : 'transparent'
               }}>
                 {d.score}% {d.status}
               </div>
@@ -176,7 +191,7 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
 };
 
 const styles = {
-  dashboardWrapper: { display: 'flex' as const, gap: '20px', width: '100%', fontFamily: 'monospace' },
+  dashboardWrapper: { display: 'flex' as const, gap: '20px', width: '100%', fontFamily: 'monospace', position: 'relative' as const },
   leftColumn: { flex: '0 0 65%', padding: '10px' },
   rightColumn: { 
     flex: '0 0 35%', 
@@ -198,7 +213,7 @@ const styles = {
   progressFill: { height: '100%', background: '#00ff41' },
   footer: { fontSize: '0.6rem', color: '#444', marginTop: '10px' },
   domainGrid: { display: 'grid' as const, gridTemplateColumns: '1fr', gap: '10px' },
-  domainCard: { border: '1px solid #222', padding: '15px', display: 'flex' as const, justifyContent: 'space-between', alignItems: 'center', background: 'rgba(5, 5, 5, 0.8)' },
+  domainCard: { border: '1px solid #222', padding: '15px', display: 'flex' as const, justifyContent: 'space-between', alignItems: 'center', background: 'rgba(5, 5, 5, 0.8)', transition: 'all 0.3s ease' },
   domainInfo: { display: 'flex' as const, flexDirection: 'column' as const, maxWidth: '70%' },
   domainNum: { fontSize: '0.6rem', color: '#444' },
   domainName: { fontSize: '0.85rem', color: '#aaa', letterSpacing: '1px' },
