@@ -34,16 +34,17 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
   }, []);
   
   const { insights, getAriesChallenge, refresh } = useDiagnosticEngine();
+  const [lastResolvedId, setLastResolvedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (insights.totalPoints > 0 && !activeChallenge) {
       const challenge = getAriesChallenge();
-      if (challenge) {
-        console.log("ARIES // INTERCEPT_TRIGGERED:", challenge.topic);
+      if (challenge && challenge.id !== lastResolvedId) {
+      console.log("ARIES // INTERCEPT_TRIGGERED:", challenge.topic);
         setActiveChallenge(challenge);
       }
     }
-  }, [insights, getAriesChallenge, activeChallenge]);
+  }, [insights, getAriesChallenge, activeChallenge, lastResolvedId]);
 
   /*
   // TEMPORARY TEST TRIGGER REPLACE WITH useEffect ABOVE FOR SANDBOXING
@@ -63,9 +64,14 @@ const CISSPDashboard: React.FC<DashboardProps> = ({ preLoadedDrillId, onDrillSta
     }
   }, []); // Runs once on mount
   */
+
   const handleAriesResolve = (summary: string) => {
     console.log("ARIES // REBUTTAL_LOGGED:", summary);
+    if (activeChallenge) {
+      setLastResolvedId(activeChallenge.id);
+    }
     setActiveChallenge(null);
+    refresh();
   };
 
   const stats = useMemo(() => {
