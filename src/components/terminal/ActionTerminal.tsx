@@ -4,6 +4,7 @@ import TacticalQuiz from '../vault/TacticalQuiz';
 import { emitRemediationTask } from '../../utils/taskEmitter';
 import { client } from '../../amplify-client';
 import { getCertConfigByPath } from '../../utils/certRegistry';
+import { getCurrentUser } from 'aws-amplify/auth';
 
 interface TerminalProps {
   preLoadedDrillId?: string | null;
@@ -84,35 +85,56 @@ const ActionTerminal: React.FC<TerminalProps> = ({ preLoadedDrillId, onDrillStar
   }, [preLoadedDrillId, onDrillStarted]);
 
   const handleComplete = async (score: number) => {
-      const drillId = activeMission?.id || 'unknown-drill';
-      if (isReporting.current) return; 
-      isReporting.current = true;
+    const drillId = activeMission?.id || 'unknown-drill';
+    if (isReporting.current) return; 
+    isReporting.current = true;
 
-      try {
-        if (score >= 90) {
-          const { data: existingTasks } = await client.models.Task.list({
-            filter: { drillId: { eq: drillId }, status: { ne: 'COMPLETED' } }
-          });
-          await Promise.all(existingTasks.map(task => 
-            client.models.Task.update({ id: task.id, status: 'COMPLETED' })
-          ));
-        } else {
-          emitRemediationTask(
-            activeMission?.label || "Diagnostic",
-            score,
-            selectedSubDomain || "General",
-            drillId,
-            config.id
-          );
-        }
-        setActiveMission(null);
-        setSelectedSubDomain(null);
-        setBankQuestions([]); 
-      } catch (error) {
-        console.error("TELEMETRY_FAILURE:", error);
-      } finally {
-        setTimeout(() => { isReporting.current = false; }, 1500);
+    try {
+      // 1. Get the authenticated user ID
+      const { userId } = await getCurrentUser();
+
+      // 2. LOG TELEMETRY: This updates your Dashboard and Diagnostic Engine
+      await client.models.UserActivity.create({
+        userId: userId,
+        visualId: drillId, 
+        domain: selectedSubDomain || activeMission?.domain || 'GENERAL',
+        score: score,
+        duration: 120, // You can implement a timer later for accuracy
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`[TELEMETRY_SUCCESS]: Activity logged for ${selectedSubDomain}`);
+
+      // 3. Handle Task Logic based on score
+      if (score >= 90) {
+        const { data: existingTasks } = await client.models.Task.list({
+          filter: { drillId: { eq: drillId }, status: { ne: 'COMPLETED' } }
+        });
+        
+        await Promise.all(existingTasks.map(task => 
+          client.models.Task.update({ id: task.id, status: 'COMPLETED' })
+        ));
+      } else {
+        // Only emit remediation if the score is below 90
+        emitRemediationTask(
+          activeMission?.label || "Diagnostic",
+          score,
+          selectedSubDomain || "General",
+          drillId,
+          config.id
+        );
       }
+
+      // 4. UI Cleanup
+      setActiveMission(null);
+      setSelectedSubDomain(null);
+      setBankQuestions([]); 
+      
+    } catch (error) {
+      console.error("TELEMETRY_FAILURE:", error);
+    } finally {
+      setTimeout(() => { isReporting.current = false; }, 1500);
+    }
   };
 
   return (
